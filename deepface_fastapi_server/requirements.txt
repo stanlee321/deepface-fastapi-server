@@ -1,0 +1,23 @@
+fastapi
+uvicorn[standard] # Includes uvloop for performance
+deepface
+# MPS specific (CHECK COMPATIBILITY!)
+# tensorflow-macos
+tensorflow-metal
+# Database
+databases[sqlite] # Pulls in aiosqlite
+sqlalchemy # databases uses SQLAlchemy core
+pydantic
+# Input Handling in face_crud
+validators
+requests
+opencv-python # For URL image decoding in face_crud
+tf-keras
+# File uploads for FastAPI
+python-multipart
+
+
+# Async file operations
+aiofiles
+
+# Add other dependencies as needed

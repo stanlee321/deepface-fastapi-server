@@ -1,0 +1,130 @@
+[
+    {
+        "image_path_or_identifier": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAARYAAAGaCAYAAADKP2zsAAAMTWlDQ1BJQ0MgUHJvZmlsZQAASImVVw...",
+        "faces": [
+            {
+                "face_index": 0,
+                "facial_area": {
+                    "x": 89,
+                    "y": 86,
+                    "w": 113,
+                    "h": 151,
+                    "left_eye": [
+                        166,
+                        148
+                    ],
+                    "right_eye": [
+                        111,
+                        147
+                    ],
+                    "nose": null,
+                    "mouth_left": null,
+                    "mouth_right": null
+                },
+                "confidence": 1.0,
+                "blacklist_matches": []
+            }
+        ],
+        "error": null
+    },
+    {
+        "image_path_or_identifier": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUgAAAIGCAYAAAA2rhayAAAMTWlDQ1BJQ0MgUHJvZmlsZQAASImVVw...",
+        "faces": [
+            {
+                "face_index": 0,
+                "facial_area": {
+                    "x": 195,
+                    "y": 162,
+                    "w": 78,
+                    "h": 88,
+                    "left_eye": [
+                        241,
+                        189
+                    ],
+                    "right_eye": [
+                        210,
+                        201
+                    ],
+                    "nose": null,
+                    "mouth_left": null,
+                    "mouth_right": null
+                },
+                "confidence": 1.0,
+                "blacklist_matches": []
+            },
+            {
+                "face_index": 1,
+                "facial_area": {
+                    "x": 36,
+                    "y": 151,
+                    "w": 67,
+                    "h": 92,
+                    "left_eye": [
+                        90,
+                        188
+                    ],
+                    "right_eye": [
+                        58,
+                        187
+                    ],
+                    "nose": null,
+                    "mouth_left": null,
+                    "mouth_right": null
+                },
+                "confidence": 1.0,
+                "blacklist_matches": []
+            },
+            {
+                "face_index": 2,
+                "facial_area": {
+                    "x": 109,
+                    "y": 155,
+                    "w": 80,
+                    "h": 109,
+                    "left_eye": [
+                        166,
+                        201
+                    ],
+                    "right_eye": [
+                        129,
+                        202
+                    ],
+                    "nose": null,
+                    "mouth_left": null,
+                    "mouth_right": null
+                },
+                "confidence": 1.0,
+                "blacklist_matches": []
+            }
+        ],
+        "error": null
+    },
+    {
+        "image_path_or_identifier": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUoAAAGsCAYAAAC7NO6aAAAMTWlDQ1BJQ0MgUHJvZmlsZQAASImVVw...",
+        "faces": [
+            {
+                "face_index": 0,
+                "facial_area": {
+                    "x": 135,
+                    "y": 107,
+                    "w": 73,
+                    "h": 94,
+                    "left_eye": [
+                        200,
+                        146
+                    ],
+                    "right_eye": [
+                        172,
+                        139
+                    ],
+                    "nose": null,
+                    "mouth_left": null,
+                    "mouth_right": null
+                },
+                "confidence": 1.0,
+                "blacklist_matches": []
+            }
+        ],
+        "error": null
+    }
+]

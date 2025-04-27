@@ -1,0 +1,39 @@
+version: '3.8' # Use a more recent version
+
+services:
+  web:
+    build: 
+      context: ./src # Build context is the src directory
+      dockerfile: Dockerfile # Explicitly state Dockerfile name (optional if named Dockerfile)
+    container_name: deepface_fastapi_service
+    # Command to run the Uvicorn server
+    # Use src.main:app because the WORKDIR is /app inside the container
+    command: uvicorn src.main:app --reload --workers 1 --host 0.0.0.0 --port 8000
+    volumes:
+      # Mount the src directory for live code reloading
+      - ./src:/app/src 
+      # Mount the blacklist images directory (adjust host path if needed)
+      - ./blacklist_db:/app/blacklist_db
+      # Mount the SQLite database file (ensure path matches DATABASE_URL in database.py)
+      - ./blacklist.db:/app/blacklist.db 
+    ports:
+      # Map host port 8000 to container port 8000
+      - "8000:8000" 
+    environment:
+      # Pass environment variables if needed (e.g., override config)
+      # - DETECTOR_BACKEND=mtcnn
+      # - MODEL_NAME=VGG-Face
+      # The DATABASE_URL is hardcoded in database.py for SQLite, so not needed here
+      - BLACKLIST_DB_PATH=/app/blacklist_db # Set path inside container
+    # Healthcheck (optional but good practice)
+    # healthcheck:
+    #   test: ["CMD", "curl", "--fail", "http://localhost:8000/"] # Check root endpoint
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+
+# Note: No separate DB service needed for SQLite
+# Volumes section is only needed if you use named volumes (not used here)
+# volumes:
+#   blacklist_images:
+#   sqlite_db_data: 
