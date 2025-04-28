@@ -11,6 +11,7 @@ It uses SQLite for managing blacklist metadata (ID, name, reason) and relies on 
 *   **Blacklist Management:** Provides CRUD endpoints to manage blacklist entries (name, reason) in an SQLite database.
 *   **Asynchronous API:** Built with FastAPI for potentially handling concurrent requests efficiently (especially I/O bound parts like downloading URLs).
 *   **Dockerized:** Includes `Dockerfile` and `docker-compose.yml` for easy setup and deployment.
+*   **Results Persistence:** Saves a copy of processed images and logs processing results (including blacklist matches) to an SQLite database.
 
 ## Project Structure
 
@@ -25,6 +26,7 @@ deepface_fastapi_server/
 │   ├── crud/
 │   │   ├── blacklist_crud.py # DB interaction logic for blacklist table
 │   │   └── face_crud.py    # Wrappers around DeepFace functions
+│   │   └── processed_image_crud.py # DB interaction logic for processed images table
 │   ├── config.py         # Configuration settings (paths, model defaults)
 │   ├── database.py       # Database connection & table setup (SQLite)
 │   ├── main.py           # FastAPI application entrypoint & events
@@ -33,6 +35,8 @@ deepface_fastapi_server/
 │   ├── Dockerfile        # Instructions to build the Docker image
 │   └── requirements.txt  # Python dependencies
 ├── blacklist.db          # SQLite database file (created automatically)
+├── processed_images_output/ # Folder where copies of processed images are saved
+│   └── .keep             # Placeholder
 ├── docker-compose.yml    # Docker Compose configuration
 └── README.md             # This file
 ```
@@ -140,7 +144,7 @@ All endpoints are prefixed with `/api/v1`.
           "threshold": 0.6 // Optional: Override default threshold
         }
         ```
-    *   **Response:** (`200 OK`) A list of `ImageProcessingResult` objects, one per input image.
+    *   **Response:** (`200 OK`) A list of `ImageProcessingResult` objects, one per input image. The results are also saved to the `processed_images` table in `blacklist.db`, and a copy of the image is saved in `processed_images_output`.
         ```json
         [
           {
@@ -276,9 +280,10 @@ Default settings for DeepFace (model, detector, metric) are set in `src/config.p
 
 ## Limitations & Potential Improvements
 
-*   **Blacklist Image Management:** The current CRUD endpoints only manage the database entries (name, reason). Adding/removing the corresponding images in the `blacklist_db` folder must be done manually, and there is no link between the DB record and the images. **This is inconsistent.** Extending the API to handle image uploads tied to DB entries is highly recommended (see below).
-*   **DeepFace Representation Refresh:** The API relies on `DeepFace.find` which uses a `.pkl` file for performance. This file is not automatically updated when images are manually added/removed from `blacklist_db`. You may need to restart the container/server or implement a mechanism to trigger `DeepFace.find(..., refresh_database=True)` periodically or via a dedicated endpoint (though this can be slow).
+*   **Blacklist Image Management:** The blacklist CRUD endpoints now handle image uploads and deletions, storing images in `./blacklist_db/[id]/` and refreshing the DeepFace index automatically.
+*   **DeepFace Representation Refresh:** The index (`.pkl` file) used by `DeepFace.find` is automatically refreshed when adding or deleting entries via the `/api/v1/blacklist` endpoints. Manual changes to the `blacklist_db` folder still require a refresh (e.g., by restarting or calling add/delete).
 *   **Alternative Blacklist Comparison:** For very large blacklists, calling `DeepFace.find` on each request might be inefficient. Consider implementing the alternative approach: pre-calculate embeddings for the blacklist (using `DeepFace.represent`) and store them (e.g., in memory, files, or a vector database). Then, in the processing endpoint, get the embedding for the input face and compare it directly against the loaded blacklist embeddings using distance metrics (`DeepFace.verify` logic or `scipy.spatial.distance`).
 *   **Database:** Uses SQLite for simplicity. For production or higher concurrency, consider switching to PostgreSQL with an async driver (`psycopg[binary]`) and potentially `pgvector` for storing embeddings directly in the database.
+*   **Results Querying:** The API doesn't currently expose endpoints to query the saved processing results from the `processed_images` table. This could be added if needed.
 *   **CPU Parallelism:** `asyncio.gather` helps with I/O, but DeepFace inference is CPU-bound. For true parallelism across multiple images in a single request, explore using Python's `multiprocessing` module within the endpoint, potentially managed with `concurrent.futures.ProcessPoolExecutor` run via `asyncio.to_thread` or similar async bridging.
 *   **Apple Silicon (MPS):** Compatibility depends on installing the correct `tensorflow-macos` and `tensorflow-metal` versions (commented out in `requirements.txt`) and potentially using an ARM64-compatible base image in the `Dockerfile`. Testing is required. 

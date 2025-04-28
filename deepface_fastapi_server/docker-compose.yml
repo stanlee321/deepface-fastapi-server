@@ -16,6 +16,8 @@ services:
       - ./blacklist_db:/app/blacklist_db
       # Mount the SQLite database file (ensure path matches DATABASE_URL in database.py)
       - ./blacklist.db:/app/blacklist.db 
+      # Mount the processed images output directory
+      - ./processed_images_output:/app/processed_images_output
     ports:
       # Map host port 8000 to container port 8000
       - "8000:8000" 
@@ -25,6 +27,7 @@ services:
       # - MODEL_NAME=VGG-Face
       # The DATABASE_URL is hardcoded in database.py for SQLite, so not needed here
       - BLACKLIST_DB_PATH=/app/blacklist_db # Set path inside container
+      - PROCESSED_IMAGES_OUTPUT_DIR=/app/processed_images_output # Set path inside container
     # Healthcheck (optional but good practice)
     # healthcheck:
     #   test: ["CMD", "curl", "--fail", "http://localhost:8000/"] # Check root endpoint
