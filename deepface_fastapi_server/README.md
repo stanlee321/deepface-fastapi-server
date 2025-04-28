@@ -236,6 +236,17 @@ All endpoints are prefixed with `/api/v1`.
         ```
 
     *   **Response:** (`201 Created`) The created `BlacklistRecord`.
+*   `POST /{id}/images`
+    *   **Purpose:** Add one or more reference images to an *existing* blacklist entry.
+    *   **Request Body:** (`multipart/form-data`) - Use file parts for images.
+    *   **Curl Example (add images to entry ID 1):**
+        ```bash
+        # Replace paths with actual image files
+        curl -X POST http://localhost:8000/api/v1/blacklist/1/images \\
+        -F "images=@/path/to/new_image1.jpg;type=image/jpeg" \\
+        -F "images=@/path/to/new_image2.png;type=image/png"
+        ```
+    *   **Response:** (`200 OK`) Success message indicating how many images were added.
 *   `GET /`
     *   **Purpose:** Retrieve all entries from the blacklist database.
     *   **Response:** (`200 OK`) A list of `BlacklistRecord` objects.
