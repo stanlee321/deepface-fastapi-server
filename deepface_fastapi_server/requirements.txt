@@ -2,7 +2,7 @@ fastapi
 uvicorn[standard] # Includes uvloop for performance
 deepface
 # MPS specific (CHECK COMPATIBILITY!)
-# tensorflow-macos
+tensorflow-macos
 tensorflow-metal
 # Database
 databases[sqlite] # Pulls in aiosqlite

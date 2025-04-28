@@ -298,3 +298,6 @@ Default settings for DeepFace (model, detector, metric) are set in `src/config.p
 *   **Results Querying:** The API doesn't currently expose endpoints to query the saved processing results from the `processed_images` table. This could be added if needed.
 *   **CPU Parallelism:** `asyncio.gather` helps with I/O, but DeepFace inference is CPU-bound. For true parallelism across multiple images in a single request, explore using Python's `multiprocessing` module within the endpoint, potentially managed with `concurrent.futures.ProcessPoolExecutor` run via `asyncio.to_thread` or similar async bridging.
 *   **Apple Silicon (MPS):** Compatibility depends on installing the correct `tensorflow-macos` and `tensorflow-metal` versions (commented out in `requirements.txt`) and potentially using an ARM64-compatible base image in the `Dockerfile`. Testing is required. 
+
+## Refs:
+- https://stackoverflow.com/questions/70981334/how-to-install-deepface-python-face-recognition-package-on-m1-mac

@@ -9,7 +9,7 @@ DISTANCE_METRIC = os.environ.get("DISTANCE_METRIC", "cosine")
 # --- Blacklist Configuration ---
 # IMPORTANT: Update this path to the actual location of your blacklist images folder
 # It should be relative to the project root or an absolute path.
-BLACKLIST_DB_PATH = os.environ.get("BLACKLIST_DB_PATH", "./blacklist_db")
+BLACKLIST_DB_PATH = os.environ.get("BLACKLIST_DB_PATH", "/Users/stanleysalvatierra/Desktop/2024/lucam/face/deepface_fastapi_server/blacklist_db")
 
 # Calculate threshold based on model and metric
 # REMOVED: Threshold will be determined internally by DeepFace.find
@@ -26,4 +26,4 @@ API_VERSION = "0.1.0"
 # --- Output Configuration ---
 # Directory to save copies of processed images
 # Path relative to the project root. Ensure it's mounted in Docker.
-PROCESSED_IMAGES_OUTPUT_DIR = os.environ.get("PROCESSED_IMAGES_OUTPUT_DIR", "./processed_images_output") 
+PROCESSED_IMAGES_OUTPUT_DIR = os.environ.get("PROCESSED_IMAGES_OUTPUT_DIR", "/Users/stanleysalvatierra/Desktop/2024/lucam/face/deepface_fastapi_server/processed_images_output") 

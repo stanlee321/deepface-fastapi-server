@@ -33,7 +33,7 @@ def draw_annotations(image_path: str, faces_data: list, has_match: bool):
         
         # Define colors (BGR format)
         box_color = (0, 0, 255) if has_match else (0, 255, 0) # Red if match, Green if no match
-        landmark_color = (0, 0, 255) # Red for landmarks
+        landmark_color = (0, 255, 0)   # Green for landmarks
         thickness = 2
 
         if isinstance(faces_data, list):
@@ -53,9 +53,9 @@ def draw_annotations(image_path: str, faces_data: list, has_match: bool):
                         left_eye = facial_area.get('left_eye')
                         right_eye = facial_area.get('right_eye')
                         if left_eye and isinstance(left_eye, list) and len(left_eye) == 2:
-                            cv2.circle(img, tuple(left_eye), radius=3, color=landmark_color, thickness=-1)
+                            cv2.circle(img, tuple(left_eye), radius=2, color=landmark_color, thickness=-1)
                         if right_eye and isinstance(right_eye, list) and len(right_eye) == 2:
-                             cv2.circle(img, tuple(right_eye), radius=3, color=landmark_color, thickness=-1)
+                             cv2.circle(img, tuple(right_eye), radius=2, color=landmark_color, thickness=-1)
         
         # Convert BGR (OpenCV default) to RGB for Gradio display
         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)

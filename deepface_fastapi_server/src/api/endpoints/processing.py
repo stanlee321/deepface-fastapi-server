@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException, Body, Depends, status
 from typing import List, Optional
-import asyncio # For potential parallel processing
+# import asyncio # For potential parallel processing
 import logging
+from tqdm import tqdm
 
 from src.models import (ProcessImagesRequest, ImageProcessingResult,
                       DetectedFaceResult, FacialArea, BlacklistMatch)
@@ -40,6 +41,8 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
         # Pass detector from params/config
         # Note: face_obj["face"] is a numpy array (RGB float 0-1)
         #       face_obj["facial_area"] has coords
+        
+        logging.info(f"1. Extracting faces from image: ")
         extracted_faces = face_crud.extract_faces_from_image(
             img_input,
             detector_backend=request_params.detector_backend or DETECTOR_BACKEND
@@ -48,6 +51,7 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
         # 2. Find matches in blacklist using DeepFace.find
         # Pass the *original* img_input (path/url/base64) as DeepFace.find handles it,
         # and pass the relevant parameters.
+        logging.info(f"2. Finding matches in blacklist:")
         blacklist_matches_list = face_crud.find_matches_in_blacklist(
             img_input,
             db_path=BLACKLIST_DB_PATH,
@@ -55,9 +59,10 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
             distance_metric=request_params.distance_metric or DISTANCE_METRIC,
             detector_backend=request_params.detector_backend or DETECTOR_BACKEND,
             threshold=request_params.threshold,
-            refresh_database=False # Keep False for API endpoint performance
+            refresh_database=False, # Keep False for API endpoint performance,
+            align=False # Disable alignment for better performance
         )
-
+        logging.info(f"3. Correlating results and building response model: {blacklist_matches_list}")
         # 3. Correlate results and build response model
         if len(extracted_faces) != len(blacklist_matches_list):
             logging.warning(
@@ -131,12 +136,12 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
     # --- D. Log Result to Database --- 
     if saved_image_path: # Only log if image was successfully saved
         await processed_image_crud.add_processed_image(
-            input_identifier=img_input[:1024], # Original identifier (truncated)
+            input_identifier=img_input[900:1024], # Original identifier (truncated)
             saved_image_path=saved_image_path, # Path where copy was saved
             result=result_obj # The full result object
         )
     else:
-         log.warning(f"Skipping DB log for '{img_input[:50]}...' because image saving failed earlier.")
+        logging.warning(f"Skipping DB log for '{img_input[:50]}...' because image saving failed earlier.")
 
     return result_obj
 
@@ -151,23 +156,23 @@ async def process_images_endpoint(request: ProcessImagesRequest = Body(...)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No images provided.")
 
     # --- Option 1: Sequential Processing (Simpler, blocks worker for longer) ---
-    # final_results: List[ImageProcessingResult] = []
-    # for img_input in request.images:
-    #     result = await process_single_image(img_input, request)
-    #     final_results.append(result)
+    final_results: List[ImageProcessingResult] = []
+    for img_input in tqdm(request.images):
+        result = await process_single_image(img_input, request)
+        final_results.append(result)
 
     # --- Option 2: Concurrent Processing using asyncio.gather (More complex, better for I/O) ---
     # Note: DeepFace calls are CPU-bound. Running them concurrently on a single
     #       worker via asyncio won't speed up the CPU part, but can help if
     #       there's I/O involved (like URL downloads in resolve_image_input).
     #       True CPU parallelism requires multiple processes (e.g., multiprocessing).
-    tasks = [process_single_image(img_input, request) for img_input in request.images]
-    try:
-        final_results = await asyncio.gather(*tasks)
-    except Exception as e:
-        # If one task fails uncaught, gather might raise it.
-        logging.error(f"Error during concurrent image processing: {e}")
-        raise HTTPException(status_code=500, detail="An error occurred during batch processing.")
+    # tasks = [process_single_image(img_input, request) for img_input in request.images]
+    # try:
+    #     final_results = await asyncio.gather(*tasks)
+    # except Exception as e:
+    #     # If one task fails uncaught, gather might raise it.
+    #     logging.error(f"Error during concurrent image processing: {e}")
+    #     raise HTTPException(status_code=500, detail="An error occurred during batch processing.")
 
     return final_results
 

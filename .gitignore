@@ -12,3 +12,4 @@ __pycache__
 .env.production.local
 .keep
 *.pkl
+*.jpeg

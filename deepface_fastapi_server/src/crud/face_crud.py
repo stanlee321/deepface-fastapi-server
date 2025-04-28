@@ -67,7 +67,7 @@ def resolve_image_input(img_input: str) -> Optional[Union[str, np.ndarray]]:
              return None
         return download_image(img_input)
     elif is_base64(img_input):
-        logging.info("Input identified as base64 string.")
+        # logging.info("Input identified as base64 string.")
         # DeepFace handles base64 strings directly
         return img_input
     elif os.path.exists(img_input):
@@ -165,11 +165,11 @@ def find_matches_in_blacklist(
              logging.warning(f"Blacklist path {db_path} is empty.")
         else:
             img_identifier = img_data if isinstance(img_data, str) else "numpy_array"
-            logging.error(f"ValueError in DeepFace find for {img_identifier}: {ve}")
+            logging.error(f"ValueError in DeepFace find for : {ve}")
         return [] # Return empty list on known ValueErrors
     except Exception as e:
         img_identifier = img_data if isinstance(img_data, str) else "numpy_array"
-        logging.error(f"Error in DeepFace find for {img_identifier}: {e}")
+        logging.error(f"Error in DeepFace find for : {e}")
         return [] # Return empty list on other errors 
 
 async def refresh_blacklist_index(db_path: str = BLACKLIST_DB_PATH):
@@ -254,7 +254,7 @@ async def save_incoming_image(img_input: str, output_dir: str = PROCESSED_IMAGES
             return saved_file_path
 
         elif is_base64(img_input):
-            logging.info("Saving image from base64 string.")
+            # logging.info("Saving image from base64 string.")
             # Extract data and potential format
             try:
                  header, encoded = img_input.split(',', 1)
@@ -270,7 +270,7 @@ async def save_incoming_image(img_input: str, output_dir: str = PROCESSED_IMAGES
             img_data = base64.b64decode(encoded, validate=True)
             async with aiofiles.open(saved_file_path, 'wb') as f:
                 await f.write(img_data)
-            logging.info(f"Saved base64 image to: {saved_file_path}")
+            # logging.info(f"Saved base64 image to: {saved_file_path}")
             return saved_file_path
 
         elif os.path.exists(img_input):

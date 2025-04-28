@@ -34,7 +34,7 @@ async def add_processed_image(
         result_json_str = json.dumps({"error": "Failed to serialize result", "details": str(e)})
 
     query = processed_images_table.insert().values(
-        input_identifier=input_identifier[:1024], # Truncate if needed
+        input_identifier=input_identifier, # Truncate
         saved_image_path=saved_image_path,
         processing_timestamp=datetime.now(), # Use current time
         has_blacklist_match=has_match,
