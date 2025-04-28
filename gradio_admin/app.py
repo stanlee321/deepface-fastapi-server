@@ -3,6 +3,8 @@ import requests
 import math
 import os
 import json # For potentially parsing detailed results
+import cv2 # Import OpenCV
+import numpy as np # Import Numpy for image manipulation
 
 # --- Configuration ---
 # Should match the running FastAPI server address
@@ -18,6 +20,59 @@ PROCESSED_IMAGES_BASE_PATH = os.environ.get("PROCESSED_IMAGES_PATH", "/Users/sta
 # Adjust if your deployment structure is different
 BLACKLIST_DB_BASE_PATH = os.environ.get("BLACKLIST_DB_IMG_PATH", "/Users/stanleysalvatierra/Desktop/2024/lucam/face/deepface_fastapi_server/blacklist_db")
 
+
+# --- New Helper Function: Draw Annotations ---
+def draw_annotations(image_path: str, faces_data: list, has_match: bool):
+    """Loads an image, draws bounding boxes and landmarks, returns annotated image as NumPy array."""
+    try:
+        img = cv2.imread(image_path)
+        if img is None:
+            print(f"Error: Could not load image for annotation: {image_path}")
+            # Return a placeholder or raise an error? For now, return None
+            return None 
+        
+        # Define colors (BGR format)
+        box_color = (0, 0, 255) if has_match else (0, 255, 0) # Red if match, Green if no match
+        landmark_color = (0, 0, 255) # Red for landmarks
+        thickness = 2
+
+        if isinstance(faces_data, list):
+            for face in faces_data:
+                if isinstance(face, dict):
+                    facial_area = face.get('facial_area')
+                    if isinstance(facial_area, dict):
+                        x = facial_area.get('x')
+                        y = facial_area.get('y')
+                        w = facial_area.get('w')
+                        h = facial_area.get('h')
+                        # Draw bounding box
+                        if all(isinstance(i, int) for i in [x, y, w, h]):
+                           cv2.rectangle(img, (x, y), (x + w, y + h), box_color, thickness)
+                           
+                        # Draw landmarks if available
+                        left_eye = facial_area.get('left_eye')
+                        right_eye = facial_area.get('right_eye')
+                        if left_eye and isinstance(left_eye, list) and len(left_eye) == 2:
+                            cv2.circle(img, tuple(left_eye), radius=3, color=landmark_color, thickness=-1)
+                        if right_eye and isinstance(right_eye, list) and len(right_eye) == 2:
+                             cv2.circle(img, tuple(right_eye), radius=3, color=landmark_color, thickness=-1)
+        
+        # Convert BGR (OpenCV default) to RGB for Gradio display
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        return img_rgb # Return the annotated image (NumPy array RGB)
+
+    except Exception as e:
+        print(f"Error during annotation drawing for {image_path}: {e}")
+        # Optionally return original image or None
+        # Try loading original again just in case annotation failed mid-way
+        try: 
+            original_img = cv2.imread(image_path)
+            if original_img is not None:
+                 return cv2.cvtColor(original_img, cv2.COLOR_BGR2RGB) # Convert original too
+            else:
+                 return None
+        except: 
+            return None
 
 # --- API Client Functions ---
 
@@ -269,27 +324,21 @@ def get_processed_images(page_num: int, page_size: int):
         response = requests.get(f"{FASTAPI_BASE_URL}/processed-images/", params={'limit': limit, 'offset': offset}, timeout=30)
         response.raise_for_status()
         data = response.json()
-        items = data.get('items', [])
+        items = data.get('items', []) # This is the raw list of dicts from API
         total_items = data.get('total_items', 0)
         total_pages = math.ceil(total_items / page_size) if page_size > 0 else 1
         total_pages = max(1, total_pages) # Ensure at least 1 page
 
         print(f"Received {len(items)} items. Total items: {total_items}. Total pages: {total_pages}")
 
-        # Prepare data for gallery - list of (image_path, caption) tuples
+        # Prepare data for gallery - list of (annotated_image_array, caption) tuples
         gallery_data = []
         for item in items:
-            # Construct the absolute path EXPECTED by the Gradio server
-            # This assumes Gradio can access the files saved by FastAPI
-            img_path_relative = item.get('saved_image_path') # This is the path INSIDE FastAPI container/env
+            img_path_relative = item.get('saved_image_path') 
             if not img_path_relative:
                  print("Warning: Item missing saved_image_path")
                  continue
 
-            # Convert to path accessible by Gradio - VERY DEPLOYMENT DEPENDENT
-            # If Gradio is local and FastAPI is Docker, need path on HOST machine
-            # We defined PROCESSED_IMAGES_BASE_PATH for this
-            # We need to extract the filename from the API path and join it with the base path
             filename = os.path.basename(img_path_relative)
             img_path_for_gradio = os.path.abspath(os.path.join(PROCESSED_IMAGES_BASE_PATH, filename))
 
@@ -301,36 +350,39 @@ def get_processed_images(page_num: int, page_size: int):
             is_match = item.get('has_blacklist_match', False)
             if is_match:
                  caption_lines.append("\n**🚨 BLACKLIST MATCH! 🚨**")
-                 # Optionally add details from item['faces'][face_idx]['blacklist_matches']
-                 faces_data = item.get('faces', [])
-                 if isinstance(faces_data, list): # Check if faces data is a list
-                     for face in faces_data:
-                         # Check if face is a dict and has blacklist_matches
+                 faces_data_for_caption = item.get('faces', []) # Get face data for caption
+                 if isinstance(faces_data_for_caption, list):
+                     for face in faces_data_for_caption:
                          if isinstance(face, dict) and face.get('blacklist_matches'):
                              matches = face.get('blacklist_matches', [])
-                             if isinstance(matches, list): # Check matches is a list
+                             if isinstance(matches, list): 
                                  for match in matches:
-                                     if isinstance(match, dict): # Check match is a dict
+                                     if isinstance(match, dict):
                                          identity = match.get('identity', 'Unknown')
                                          distance = match.get('distance', -1)
-                                         # Add matched identity to caption if found
                                          caption_lines.append(f"  - Match: {os.path.basename(identity)} (Dist: {distance:.4f})")
 
             caption = "\n".join(caption_lines)
-            
-            # Basic check if path exists before adding
+
+            # Draw annotations
+            annotated_image = None
             if os.path.exists(img_path_for_gradio):
-                 gallery_data.append((img_path_for_gradio, caption))
+                 annotated_image = draw_annotations(img_path_for_gradio, item.get('faces', []), is_match)
             else:
                  print(f"Warning: Image path not accessible/found by Gradio: {img_path_for_gradio} (Original API path: {img_path_relative})")
-                 # Optionally add a placeholder image or skip
+            
+            if annotated_image is not None:
+                 # Gallery expects list of (image, caption)
+                 gallery_data.append((annotated_image, caption))
+            # else: # Optionally append a placeholder if annotation failed
+                 # gallery_data.append((placeholder_img_array, caption + "\n(Error loading/annotating image)"))
 
         # Update pagination controls visibility/values
         prev_btn_interactive = page_num > 1
         next_btn_interactive = page_num < total_pages
         page_info_text = f"Page {page_num} of {total_pages} ({total_items} total items)"
 
-        # Return the raw items along with gallery data
+        # Return the gallery data AND raw items list
         return gallery_data, items, page_num, total_pages, page_info_text, gr.update(interactive=prev_btn_interactive), gr.update(interactive=next_btn_interactive)
 
     except requests.exceptions.RequestException as e:
@@ -536,19 +588,25 @@ with gr.Blocks(theme=gr.themes.Soft(), title="DeepFace Admin") as demo:
                 if not page_items or selection_data.index >= len(page_items):
                     print(f"Selection index {selection_data.index} out of bounds for page data size {len(page_items)}")
                     return None, "Error: Selection index out of bounds.", []
-
-                # selected_item is now the raw dictionary from the API response
                 selected_item = page_items[selection_data.index] 
                 
                 # Construct Gradio path for the selected processed image
                 saved_image_relative = selected_item.get('saved_image_path')
                 selected_img_path_for_gradio = None
+                annotated_selected_image = None # Variable for the annotated image array
+                
                 if saved_image_relative:
                     filename = os.path.basename(saved_image_relative)
                     selected_img_path_for_gradio = os.path.abspath(os.path.join(PROCESSED_IMAGES_BASE_PATH, filename))
-                    if not os.path.exists(selected_img_path_for_gradio):
+                    if os.path.exists(selected_img_path_for_gradio):
+                        # Draw annotations on the selected image for the detail view
+                        annotated_selected_image = draw_annotations(
+                            selected_img_path_for_gradio, 
+                            selected_item.get('faces', []), 
+                            selected_item.get('has_blacklist_match', False)
+                        )
+                    else:
                          print(f"Warning: Selected processed image not found by Gradio: {selected_img_path_for_gradio}")
-                         selected_img_path_for_gradio = None # Clear path if not found
                 
                 # Initialize outputs
                 info_lines = []
@@ -566,14 +624,12 @@ with gr.Blocks(theme=gr.themes.Soft(), title="DeepFace Admin") as demo:
                                 if isinstance(matches, list):
                                     for match in matches:
                                         if isinstance(match, dict):
-                                            identity = match.get('identity', 'Unknown') # Path like ./blacklist_db/1/1.png
+                                            identity = match.get('identity', 'Unknown') 
                                             distance = match.get('distance', -1)
                                             identity_basename = os.path.basename(identity)
                                             info_lines.append(f"  - Match: {identity_basename} (Dist: {distance:.4f})")
                                             
-                                            # Construct path to the matched blacklist image
                                             try:
-                                                # Extract ID dir from identity path: ./blacklist_db/ID/filename
                                                 parts = identity.strip('./').split('/')
                                                 if len(parts) >= 3 and parts[0] == 'blacklist_db':
                                                     match_id_dir = parts[1]
@@ -588,7 +644,8 @@ with gr.Blocks(theme=gr.themes.Soft(), title="DeepFace Admin") as demo:
                                             except Exception as e:
                                                 print(f"Error constructing path for matched image {identity}: {e}")
                                                 
-                return selected_img_path_for_gradio, "\n".join(info_lines), match_gallery_output
+                # Return the annotated image array instead of the path
+                return annotated_selected_image, "\n".join(info_lines), match_gallery_output
                 
             processed_gallery.select(
                 fn=display_selected_details,

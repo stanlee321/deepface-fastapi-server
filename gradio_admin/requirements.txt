@@ -1,2 +1,3 @@
 gradio
-requests 
+requests
+opencv-python # For drawing on images 
