@@ -212,20 +212,18 @@ All endpoints are prefixed with `/api/v1`.
         *   Input images can be file paths *accessible from the server environment* (local path when running locally, path inside container when running in Docker), public URLs, or base64 encoded strings.
         *   Uses `asyncio.gather` internally, which provides concurrency for I/O tasks like downloading URLs but not true CPU parallelism for DeepFace model inference.
 
-*   `GET /process-results` (**Note: Not Yet Implemented**)
-    *   **Purpose:** (Future Enhancement) Retrieve a paginated list of previously processed image results stored in the database.
+*   `GET /processed-images/`
+    *   **Purpose:** Retrieve a paginated list of previously processed image results stored in the database.
     *   **Request Query Parameters:**
-        *   `skip` (int, optional, default=0): Number of records to skip for pagination.
-        *   `limit` (int, optional, default=100): Maximum number of records to return.
-    *   **Response:** (`200 OK`) A list containing details of processed images and their results.
-    *   **Implementation Details:** This endpoint would need to be added to `src/api/endpoints/processing.py` and query the `processed_images` table in `blacklist.db` using the `processed_image_crud.py` functions, applying the skip/limit logic.
-
-    CURL Example:
-
-    ```bash
-
-    curl http://localhost:8000/api/v1/process/process-results?skip=0&limit=100
-    ```
+        *   `offset` (int, optional, default=0): Number of records to skip for pagination.
+        *   `limit` (int, optional, default=10): Maximum number of records to return (adjust default based on actual implementation if known, using 10 as a placeholder).
+    *   **Response:** (`200 OK`) A JSON object containing:
+        *   `total_items` (int): The total number of records available.
+        *   `items` (list): A list of `ImageProcessingResult`-like objects for the requested page.
+    *   **Curl Example:**
+        ```bash
+        curl http://localhost:8000/api/v1/processed-images/?offset=0&limit=10
+        ```
 
 **Blacklist Management (`/blacklist`)**
 
@@ -316,3 +314,10 @@ Default settings for DeepFace (model, detector, metric) are set in `src/config.p
 
 ## Refs:
 - https://stackoverflow.com/questions/70981334/how-to-install-deepface-python-face-recognition-package-on-m1-mac
+
+
+curl -X POST "https://metabase.ileader.ai/api/v1/create_company" \
+        -H "Content-Type: application/json" \
+        -H "X-API-Key: XXX" \
+        -d '{\n           "company_id": "some-unique-company-identifier-123" \      
+    }'
