@@ -11,6 +11,9 @@ import shutil # For copying files
 import aiofiles # For async saving of uploads/downloads
 import asyncio # For async operations
 
+# Import the model used in type hint
+from models import FacialArea
+
 from config import settings
 
 
@@ -292,3 +295,68 @@ async def save_incoming_image(img_input: str, output_dir: str = settings.PROCESS
              try: os.remove(saved_file_path) 
              except OSError: pass
         return None 
+
+# === Image Drawing Utility ===
+
+def draw_bounding_box_on_image(image_path: str, box_coords: FacialArea, match_status: bool):
+    """Draws a bounding box on an image file.
+
+    Args:
+        image_path: Path to the image file.
+        box_coords: FacialArea object containing coordinates.
+        match_status: Boolean indicating if it was a blacklist match (for color).
+    """
+    try:
+        # Check if cv2 is available (might not be if only base64/url used previously)
+        global cv2
+        if 'cv2' not in globals():
+            import cv2
+            
+        img = cv2.imread(image_path)
+        if img is None:
+            log.error(f"[Drawing] Failed to read image: {image_path}")
+            return
+            
+        img_h, img_w = img.shape[:2]
+        
+        # Coordinates from FacialArea (can be int or float)
+        x = box_coords.x
+        y = box_coords.y
+        w = box_coords.w
+        h = box_coords.h
+        
+        if None in [x, y, w, h]:
+             log.warning(f"[Drawing] Skipping draw for {image_path}, missing coordinates.")
+             return
+
+        # Convert fractional coordinates (0.0-1.0) to absolute pixel values if necessary
+        if isinstance(x, float) and x <= 1.0: x = int(x * img_w)
+        if isinstance(y, float) and y <= 1.0: y = int(y * img_h)
+        if isinstance(w, float) and w <= 1.0: w = int(w * img_w)
+        if isinstance(h, float) and h <= 1.0: h = int(h * img_h)
+        
+        # Ensure coordinates are integers for drawing
+        try:
+             x, y, w, h = int(x), int(y), int(w), int(h)
+        except (TypeError, ValueError):
+            log.error(f"[Drawing] Invalid coordinate types for {image_path}: x={x}, y={y}, w={w}, h={h}")
+            return
+
+        # Define color based on match status (BGR)
+        color = (0, 0, 255) if match_status else (0, 255, 0) # Red for match, Green otherwise
+        thickness = 2
+
+        # Draw the rectangle
+        cv2.rectangle(img, (x, y), (x + w, y + h), color, thickness)
+        
+        # Overwrite the original image file
+        success = cv2.imwrite(image_path, img)
+        if success:
+             log.info(f"[Drawing] Successfully drew bounding box on: {image_path}")
+        else:
+             log.error(f"[Drawing] Failed to save annotated image: {image_path}")
+             
+    except ImportError:
+         log.warning("OpenCV not installed, cannot draw bounding boxes. Please install opencv-python.")
+    except Exception as e:
+        log.exception(f"[Drawing] Error drawing bounding box on {image_path}: {e}") 

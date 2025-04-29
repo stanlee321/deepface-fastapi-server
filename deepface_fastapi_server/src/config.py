@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     # Optional: Database URL (if moving away from hardcoded database.py)
     # DATABASE_URL: str = "sqlite+aiosqlite:///./blacklist.db"
 
+    # --- Feature Flags ---
+    DRAW_BOUNDING_BOXES: bool = os.getenv("DRAW_BOUNDING_BOXES", "true").lower() == "true"
+
     # --- Pydantic Settings Configuration ---
     class Config:
         # Optional: Specify .env file explicitly if needed

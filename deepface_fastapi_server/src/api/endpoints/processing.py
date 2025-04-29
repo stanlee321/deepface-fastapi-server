@@ -13,6 +13,11 @@ from services import face_processing_service
 from crud import face_crud 
 from crud import processed_image_crud # Import the new CRUD module
 # Keep config imports if needed, although service layer might handle them
+from config import (
+    settings # Import settings instead
+)
+# Import the specific model for type hinting
+from models import FacialArea 
 
 
 # --- Endpoint to fetch processed results (Added based on README update) --- 
@@ -114,6 +119,27 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
              log.info(f"No blacklist matches found for image: {img_input[:50]}...")
              # Keep image_faces_results empty
 
+        # --- Attempt to Draw Bounding Box if Enabled --- 
+        if settings.DRAW_BOUNDING_BOXES and saved_image_path and first_match_face_area:
+            # Check if first_match_face_area is actually a FacialArea instance
+            if isinstance(first_match_face_area, FacialArea):
+                 log.info(f"Attempting to draw bounding box on {saved_image_path}")
+                 try:
+                     # Call drawing function (fire and forget, or await if made async)
+                     # Making it async requires changes in face_crud and here
+                     # For now, run synchronously within the async endpoint
+                     face_crud.draw_bounding_box_on_image(
+                         image_path=saved_image_path,
+                         box_coords=first_match_face_area,
+                         match_status=has_match_flag
+                     )
+                 except Exception as draw_err:
+                      log.error(f"Failed to execute drawing function: {draw_err}")
+            else:
+                 log.warning("Cannot draw bounding box: facial area data is not available or invalid.")
+        elif settings.DRAW_BOUNDING_BOXES:
+             log.info("Skipping bounding box drawing: Flag enabled but no matches or facial area found.")
+             
     except Exception as e:
         logging.exception(f"Unhandled error processing image '{img_input[:50]}...': {e}")
         error_msg = f"An unexpected error occurred processing this image."
