@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from src.database import connect_db, disconnect_db, create_db_and_tables
 from src.api.router import api_router
 from src.config import API_TITLE, API_VERSION
@@ -25,6 +26,17 @@ log.info("Database table check complete.")
 
 # --- FastAPI App Initialization ---
 app = FastAPI(title=API_TITLE, version=API_VERSION)
+
+# --- CORS Middleware ---
+# Allow requests from any origin
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
+# --- END CORS Middleware ---
 
 @app.on_event("startup")
 async def startup_event():
