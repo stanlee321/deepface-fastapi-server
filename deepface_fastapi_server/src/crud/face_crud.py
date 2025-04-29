@@ -11,11 +11,8 @@ import shutil # For copying files
 import aiofiles # For async saving of uploads/downloads
 import asyncio # For async operations
 
-# Import config to get default parameters
-from src.config import (
-    DETECTOR_BACKEND, MODEL_NAME, DISTANCE_METRIC, BLACKLIST_DB_PATH,
-    PROCESSED_IMAGES_OUTPUT_DIR # Import the new output dir config
-)
+from config import settings
+
 
 def is_base64(s: str) -> bool:
     """Check if a string is likely base64 encoded."""
@@ -80,7 +77,7 @@ def resolve_image_input(img_input: str) -> Optional[Union[str, np.ndarray]]:
 
 def extract_faces_from_image(
     img_data: Union[str, np.ndarray],
-    detector_backend: str = DETECTOR_BACKEND,
+    detector_backend: str = settings.DETECTOR_BACKEND,
     enforce_detection: bool = False, # Default to False to handle images w/o faces gracefully
     align: bool = True
 ) -> List[Dict[str, Any]]:
@@ -119,10 +116,10 @@ def extract_faces_from_image(
 
 def find_matches_in_blacklist(
     img_data: Union[str, np.ndarray],
-    db_path: str = BLACKLIST_DB_PATH,
-    model_name: str = MODEL_NAME,
-    distance_metric: str = DISTANCE_METRIC,
-    detector_backend: str = DETECTOR_BACKEND, # Use same detector for consistency
+    db_path: str = settings.BLACKLIST_DB_PATH,
+    model_name: str = settings.MODEL_NAME,
+    distance_metric: str = settings.DISTANCE_METRIC,
+    detector_backend: str = settings.DETECTOR_BACKEND, # Use same detector for consistency
     threshold: Optional[float] = None, # Allow overriding default, but don't use config value here
     align: bool = True,
     refresh_database: bool = False # Keep False for performance unless explicitly needed
@@ -172,7 +169,7 @@ def find_matches_in_blacklist(
         logging.error(f"Error in DeepFace find for : {e}")
         return [] # Return empty list on other errors 
 
-async def refresh_blacklist_index(db_path: str = BLACKLIST_DB_PATH):
+async def refresh_blacklist_index(db_path: str = settings.BLACKLIST_DB_PATH):
     """
     Forces DeepFace to refresh its index (.pkl file) for the given database path.
     This is done by calling DeepFace.find with refresh_database=True.
@@ -205,9 +202,9 @@ async def refresh_blacklist_index(db_path: str = BLACKLIST_DB_PATH):
         _ = DeepFace.find(
             img_path=dummy_img, # Use dummy image
             db_path=db_path,
-            model_name=MODEL_NAME, # Use configured model
-            distance_metric=DISTANCE_METRIC, # Use configured metric
-            detector_backend=DETECTOR_BACKEND, # Use configured detector
+            model_name=settings.MODEL_NAME, # Use configured model
+            distance_metric=settings.DISTANCE_METRIC, # Use configured metric
+            detector_backend=settings.DETECTOR_BACKEND, # Use configured detector
             enforce_detection=False,
             align=True,
             threshold=None, # Use internal default threshold for refresh check
@@ -224,7 +221,7 @@ async def refresh_blacklist_index(db_path: str = BLACKLIST_DB_PATH):
     except Exception as e:
         logging.error(f"Error during DeepFace index refresh for '{db_path}': {e}") 
 
-async def save_incoming_image(img_input: str, output_dir: str = PROCESSED_IMAGES_OUTPUT_DIR) -> Optional[str]:
+async def save_incoming_image(img_input: str, output_dir: str = settings.PROCESSED_IMAGES_OUTPUT_DIR) -> Optional[str]:
     """
     Saves a copy of the input image (path, URL, or base64) to the specified output directory.
     Uses a UUID for a unique filename.

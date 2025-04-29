@@ -1,23 +1,34 @@
+# Core FastAPI & Server
 fastapi
-uvicorn[standard] # Includes uvloop for performance
+uvicorn[standard] # Includes standard dependencies like websockets, watchfiles, python-dotenv
+
+# Face Processing
 deepface
-# MPS specific (CHECK COMPATIBILITY!)
-tensorflow-macos
-tensorflow-metal
+opencv-python # Needed by deepface and face_crud for image loading/processing
+# MPS specific (CHECK COMPATIBILITY & MANAGE SEPARATELY!)
+# tensorflow-macos
+# tensorflow-metal
+tf-keras # Sometimes needed by deepface depending on models used
+
+# AWS Backend (Optional, install if using FACE_PROCESSING_BACKEND='aws_rekognition')
+boto3
+
 # Database
-databases[sqlite] # Pulls in aiosqlite
-sqlalchemy # databases uses SQLAlchemy core
+SQLAlchemy # Core ORM used by databases and potentially directly
+databases[sqlite] # Default DB backend (pulls in aiosqlite)
+# databases[postgresql] # Uncomment if using PostgreSQL (pulls in asyncpg)
+# psycopg2-binary # Required driver if using blocking SQLAlchemy with PostgreSQL
+
+# Data Validation & Models
 pydantic
-# Input Handling in face_crud
-validators
-requests
-opencv-python # For URL image decoding in face_crud
-tf-keras
-# File uploads for FastAPI
-python-multipart
+pydantic-settings # For settings management
 
+# Input Handling & Utils
+validators # For URL validation in face_crud
+requests # For URL downloading in face_crud
+python-multipart # For FastAPI File uploads
+aiofiles # For async file saving
+dotenv # Handled by uvicorn[standard], but listed explicitly if needed elsewhere
 
-# Async file operations
-aiofiles
-
-# Add other dependencies as needed
+# Add other specific dependencies below as needed
+pydantic_settings

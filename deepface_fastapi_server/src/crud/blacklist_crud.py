@@ -1,6 +1,6 @@
 # Example using 'databases' library
-from src.database import database, blacklist_table
-from src.models import BlacklistCreate, BlacklistRecord # Ensure correct import
+from database import database, blacklist_table
+from models import BlacklistCreate, BlacklistRecord # Ensure correct import
 from typing import List, Optional
 import logging
 

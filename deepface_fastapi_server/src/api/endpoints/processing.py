@@ -1,186 +1,191 @@
-from fastapi import APIRouter, HTTPException, Body, Depends, status
+from fastapi import APIRouter, HTTPException, Body, status
 from typing import List, Optional
 # import asyncio # For potential parallel processing
 import logging
 from tqdm import tqdm
 
-from src.models import (ProcessImagesRequest, ImageProcessingResult,
+from models import (ProcessImagesRequest, ImageProcessingResult,
                       DetectedFaceResult, FacialArea, BlacklistMatch)
-from src.crud import face_crud
-from src.crud import processed_image_crud # Import the new CRUD module
-from src.config import (
-    BLACKLIST_DB_PATH, DETECTOR_BACKEND, MODEL_NAME,
-    DISTANCE_METRIC
-)
+                      
+# Import the new service layer
+from services import face_processing_service
+# Keep face_crud for helper functions like save_incoming_image
+from crud import face_crud 
+from crud import processed_image_crud # Import the new CRUD module
+# Keep config imports if needed, although service layer might handle them
+
+
+# --- Endpoint to fetch processed results (Added based on README update) --- 
+from models import PaginatedProcessedImagesResponse # Import the pagination model
 
 router = APIRouter()
+log = logging.getLogger(__name__)
 
 async def process_single_image(img_input: str, request_params: ProcessImagesRequest) -> ImageProcessingResult:
     """Helper function to process a single image (path, url, or base64)."""
-    image_faces: List[DetectedFaceResult] = []
+    image_faces_results: List[DetectedFaceResult] = [] # Renamed for clarity
     error_msg: Optional[str] = None
-    saved_image_path: Optional[str] = None # Variable to store path of saved image
+    saved_image_path: Optional[str] = None
 
     try:
         # --- A. Save a copy of the incoming image --- 
         saved_image_path = await face_crud.save_incoming_image(img_input)
         if not saved_image_path:
-            # If saving failed, create an error result and skip DeepFace processing
             error_msg = "Failed to save or process input image."
             result_obj = ImageProcessingResult(
                  image_path_or_identifier=img_input[:100] + ("..." if len(img_input) > 100 else ""),
-                 faces=[],
-                 error=error_msg
+                 faces=[], # Empty faces list
+                 error=error_msg,
+                 saved_image_path=None, # Indicate save failed
+                 has_blacklist_match=False # Default
             )
-            # Optionally log to DB even on failure?
-            # await processed_image_crud.add_processed_image(img_input, "SAVE_FAILED", result_obj)
-            return result_obj # Return error result immediately
+            # Skipping DB logging if save failed
+            return result_obj
 
-        # --- B. Process with DeepFace (using original input identifier) ---
-        # 1. Extract faces (provides coordinates and face arrays)
-        # Pass detector from params/config
-        # Note: face_obj["face"] is a numpy array (RGB float 0-1)
-        #       face_obj["facial_area"] has coords
+        # --- B. Process using the Service Layer --- 
+        logging.info(f"Finding blacklist matches via service layer for image: {img_input[:50]}...")
         
-        logging.info(f"1. Extracting faces from image: ")
-        extracted_faces = face_crud.extract_faces_from_image(
-            img_input,
-            detector_backend=request_params.detector_backend or DETECTOR_BACKEND
+        # Call the service layer function to find matches
+        # It handles backend switching and returns a consistent List[Dict] format
+        matches = await face_processing_service.find_blacklist_matches(
+            img_data=img_input, # Pass original identifier
+            threshold=request_params.threshold # Pass optional threshold override
         )
 
-        # 2. Find matches in blacklist using DeepFace.find
-        # Pass the *original* img_input (path/url/base64) as DeepFace.find handles it,
-        # and pass the relevant parameters.
-        logging.info(f"2. Finding matches in blacklist:")
-        blacklist_matches_list = face_crud.find_matches_in_blacklist(
-            img_input,
-            db_path=BLACKLIST_DB_PATH,
-            model_name=request_params.model_name or MODEL_NAME,
-            distance_metric=request_params.distance_metric or DISTANCE_METRIC,
-            detector_backend=request_params.detector_backend or DETECTOR_BACKEND,
-            threshold=request_params.threshold,
-            refresh_database=False, # Keep False for API endpoint performance,
-            align=False # Disable alignment for better performance
-        )
-        logging.info(f"3. Correlating results and building response model: {blacklist_matches_list}")
-        # 3. Correlate results and build response model
-        if len(extracted_faces) != len(blacklist_matches_list):
-            logging.warning(
-                f"Face count mismatch for image '{img_input[:50]}...'. "
-                f"Extracted: {len(extracted_faces)}, Find Results: {len(blacklist_matches_list)}. "
-                f"This might happen if face detection settings differ or 'find' fails internally."
-            )
-            # Fallback: return extracted faces without blacklist info
-            for i, face_obj in enumerate(extracted_faces):
+        # --- C. Construct Response from Matches --- 
+        # The service function returns matches directly. We need to structure them
+        # into the DetectedFaceResult format. This might require adjustment
+        # as find_matches doesn't inherently group by detected face index like
+        # the previous logic combining extract_faces and find.
+        
+        # Simplification: Assume the API contract requires *matches* found in the image,
+        # not necessarily a breakdown per *detected* face if multiple faces exist.
+        # The current model `ImageProcessingResult` has a `faces: List[DetectedFaceResult]`
+        # field. Let's adapt: Create *one* DetectedFaceResult if matches are found,
+        # containing all matches. This is a potential change to the exact response meaning.
+        # If *strict* per-face results are needed, the service layer needs enhancement.
+        
+        has_match_flag = False
+        if matches:
+            # Create BlacklistMatch models from the dictionaries returned by the service
+            validated_matches: List[BlacklistMatch] = []
+            for match_dict in matches:
                 try:
-                    facial_area_model = FacialArea(**face_obj["facial_area"])
-                    image_faces.append(DetectedFaceResult(
-                        face_index=i,
-                        facial_area=facial_area_model,
-                        confidence=face_obj["confidence"],
-                        blacklist_matches=[] # Indicate missing/mismatched data
-                    ))
+                     validated_matches.append(BlacklistMatch.model_validate(match_dict))
+                     has_match_flag = True # Mark if any valid match exists
                 except Exception as model_error:
-                    logging.error(f"Error creating FacialArea model for face {i}: {model_error}")
-                    error_msg = f"Error processing face {i} data."
-        else:
-            # Iterate through extracted faces and corresponding find results
-            for i, face_obj in enumerate(extracted_faces):
+                     log.error(f"Error validating BlacklistMatch model for match data: {match_dict}. Error: {model_error}")
+                     # Optionally include partial results or skip this match
+                     
+            # Extract bounding box from the first match (assuming it represents the main matched face)
+            first_match_face_area = None
+            if validated_matches: # Check if we have at least one validated match
+                first_match_data = matches[0] # Get raw dict again for coords
                 try:
-                    facial_area_model = FacialArea(**face_obj["facial_area"])
+                    # Attempt to create FacialArea from the first match's source coordinates
+                    x_coord = first_match_data.get('source_x')
+                    y_coord = first_match_data.get('source_y')
+                    w_coord = first_match_data.get('source_w')
+                    h_coord = first_match_data.get('source_h')
                     
-                    # Process the DataFrame for the i-th face
-                    current_matches_df = blacklist_matches_list[i]
-                    current_matches: List[BlacklistMatch] = []
-                    if not current_matches_df.empty:
-                        # Convert DataFrame rows to list of dicts, then validate with Pydantic
-                        match_dicts = current_matches_df.to_dict('records')
-                        current_matches = [
-                            BlacklistMatch.model_validate(match_dict)
-                            for match_dict in match_dicts
-                        ]
-
-                    image_faces.append(DetectedFaceResult(
-                        face_index=i,
-                        facial_area=facial_area_model,
-                        confidence=face_obj["confidence"],
-                        blacklist_matches=current_matches
-                    ))
-                except Exception as model_error:
-                     logging.error(f"Error creating Pydantic models for face {i}: {model_error}")
-                     # Append partial result or set overall error?
-                     error_msg = f"Error processing result data for face {i}."
-                     # Add face with empty matches to indicate partial failure
-                     try: # Safeguard model creation even in error path
-                         facial_area_model = FacialArea(**face_obj["facial_area"])
-                         image_faces.append(DetectedFaceResult(
-                            face_index=i,
-                            facial_area=facial_area_model,
-                            confidence=face_obj.get("confidence", 0.0),
-                            blacklist_matches=[]
-                         ))
-                     except: pass # Ignore if facial area itself is bad
+                    # Only create FacialArea if all coordinates are present (not None)
+                    if all(coord is not None for coord in [x_coord, y_coord, w_coord, h_coord]):
+                         first_match_face_area = FacialArea(
+                             x=x_coord,
+                             y=y_coord,
+                             w=w_coord,
+                             h=h_coord,
+                         )
+                    else:
+                        log.warning("Could not create FacialArea from first match data as coordinates were missing.")
+                except Exception as area_error:
+                    log.error(f"Error creating FacialArea from match data {first_match_data}: {area_error}")
+                    
+            # Create a single DetectedFaceResult encompassing all matches found
+            # Confidence is not directly available from search results, set to None
+            detected_face = DetectedFaceResult(
+                 face_index=0, 
+                 facial_area=first_match_face_area, 
+                 confidence=None, # Confidence isn't directly available here
+                 blacklist_matches=validated_matches
+            )
+            image_faces_results.append(detected_face)
+        else:
+             log.info(f"No blacklist matches found for image: {img_input[:50]}...")
+             # Keep image_faces_results empty
 
     except Exception as e:
-        # Use logging.exception to include the full traceback
-        logging.exception(f"Unhandled error processing image '{img_input[:50]}...': {e}") # Log full traceback
+        logging.exception(f"Unhandled error processing image '{img_input[:50]}...': {e}")
         error_msg = f"An unexpected error occurred processing this image."
 
-    # --- C. Construct Final Result Object --- 
+    # --- D. Construct Final Result Object --- 
     result_obj = ImageProcessingResult(
-        image_path_or_identifier=img_input[:100] + ("..." if len(img_input) > 100 else ""), # Truncate long base64
-        faces=image_faces,
-        error=error_msg
+        image_path_or_identifier=img_input[:100] + ("..." if len(img_input) > 100 else ""),
+        faces=image_faces_results, # Use the potentially single result
+        error=error_msg,
+        saved_image_path=saved_image_path, # Include path to saved image
+        has_blacklist_match=has_match_flag # Set flag based on if matches were found
     )
     
-    # --- D. Log Result to Database --- 
-    if saved_image_path: # Only log if image was successfully saved
+    # --- E. Log Result to Database --- 
+    if saved_image_path: 
         await processed_image_crud.add_processed_image(
-            input_identifier=img_input[900:1024], # Original identifier (truncated)
+            input_identifier=img_input[:100] + ("..." if len(img_input) > 100 else ""), # Original identifier (truncated)
             saved_image_path=saved_image_path, # Path where copy was saved
             result=result_obj # The full result object
         )
     else:
-        logging.warning(f"Skipping DB log for '{img_input[:50]}...' because image saving failed earlier.")
+        # This case is handled earlier, but included defensively
+        logging.warning(f"Skipping DB log for '{img_input[:50]}...' because image saving failed.")
 
     return result_obj
 
 @router.post("/process-images", response_model=List[ImageProcessingResult])
 async def process_images_endpoint(request: ProcessImagesRequest = Body(...)):
     """
-    Processes a list of images (paths, URLs, or base64 strings).
-    For each image, extracts faces, gets coordinates, and checks against the blacklist.
-    Returns a list of results, one for each input image.
+    Processes a list of images (paths, URLs, or base64 strings) using the configured backend.
+    For each image, finds blacklist matches and returns results.
     """
     if not request.images:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No images provided.")
 
-    # --- Option 1: Sequential Processing (Simpler, blocks worker for longer) ---
     final_results: List[ImageProcessingResult] = []
-    for img_input in tqdm(request.images):
+    # Using sequential processing for simplicity now.
+    # Consider asyncio.gather or background tasks for production.
+    log.info(f"Processing {len(request.images)} images sequentially...")
+    for img_input in tqdm(request.images, desc="Processing Images"):
         result = await process_single_image(img_input, request)
         final_results.append(result)
-
-    # --- Option 2: Concurrent Processing using asyncio.gather (More complex, better for I/O) ---
-    # Note: DeepFace calls are CPU-bound. Running them concurrently on a single
-    #       worker via asyncio won't speed up the CPU part, but can help if
-    #       there's I/O involved (like URL downloads in resolve_image_input).
-    #       True CPU parallelism requires multiple processes (e.g., multiprocessing).
-    # tasks = [process_single_image(img_input, request) for img_input in request.images]
-    # try:
-    #     final_results = await asyncio.gather(*tasks)
-    # except Exception as e:
-    #     # If one task fails uncaught, gather might raise it.
-    #     logging.error(f"Error during concurrent image processing: {e}")
-    #     raise HTTPException(status_code=500, detail="An error occurred during batch processing.")
-
+    log.info(f"Finished processing {len(request.images)} images.")
+    
     return final_results
 
-# --- Example: Optional endpoint for single image processing ---
-# @router.post("/process-single-image", response_model=ImageProcessingResult)
-# async def process_single_image_endpoint(request: ProcessImagesRequest = Body(...)):
-#     """ Processes a single image provided in a list format. """
-#     if not request.images or len(request.images) != 1:
-#         raise HTTPException(status_code=400, detail="Please provide exactly one image in the 'images' list.")
-#     result = await process_single_image(request.images[0], request)
-#     return result 
+
+@router.get("/processed-images/", response_model=PaginatedProcessedImagesResponse)
+async def get_processed_images_results(
+    offset: int = 0,
+    limit: int = 10 # Default limit consistent with Gradio app?
+):
+    """Retrieves previously processed image results from the database with pagination."""
+    if offset < 0:
+        raise HTTPException(status_code=400, detail="Offset cannot be negative")
+    if limit < 1:
+        raise HTTPException(status_code=400, detail="Limit must be at least 1")
+        
+    results = await processed_image_crud.get_processed_images(offset=offset, limit=limit)
+    total = await processed_image_crud.count_processed_images()
+    
+    # Validate results against the Pydantic model used for DB storage/retrieval
+    # Assuming get_processed_images returns list of ProcessedImageDB
+    validated_items = [
+        ImageProcessingResult.model_validate(item.result_data) 
+        for item in results if item.result_data
+    ]
+    
+    # Construct the paginated response
+    return PaginatedProcessedImagesResponse(
+        total_items=total,
+        items=validated_items,
+        offset=offset,
+        limit=limit
+    ) 

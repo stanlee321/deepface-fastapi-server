@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.database import connect_db, disconnect_db, create_db_and_tables
-from src.api.router import api_router
-from src.config import API_TITLE, API_VERSION
+from database import connect_db, disconnect_db, create_db_and_tables
+from api.router import api_router
+from config import settings
+
 import logging
 
 # Configure logging
@@ -24,8 +25,12 @@ log.info("Attempting to create database tables...")
 create_db_and_tables()
 log.info("Database table check complete.")
 
+
+
+
+
 # --- FastAPI App Initialization ---
-app = FastAPI(title=API_TITLE, version=API_VERSION)
+app = FastAPI(title=settings.API_TITLE, version=settings.API_VERSION)
 
 # --- CORS Middleware ---
 # Allow requests from any origin
@@ -58,15 +63,14 @@ app.include_router(api_router, prefix="/api/v1") # Add a version prefix
 # --- Root Endpoint --- (Optional)
 @app.get("/", tags=["Health Check"])
 async def root():
-    return {"message": f"Welcome to the {API_TITLE}"}
+    return {"message": f"Welcome to the {settings.API_TITLE}"}
 
 # Add any other middleware or configurations as needed
 # Example CORS middleware:
-# from fastapi.middleware.cors import CORSMiddleware
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["*"],  # Allows all origins
-#     allow_credentials=True,
-#     allow_methods=["*"],  # Allows all methods
-#     allow_headers=["*"],  # Allows all headers
-# ) 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+) 

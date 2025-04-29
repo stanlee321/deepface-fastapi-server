@@ -3,8 +3,8 @@ import json
 from typing import Optional
 from datetime import datetime
 
-from src.database import database, processed_images_table
-from src.models import ImageProcessingResult # Import the Pydantic model for type hinting
+from database import database, processed_images_table
+from models import ImageProcessingResult # Import the Pydantic model for type hinting
 from sqlalchemy import func
 from sqlalchemy import select
 

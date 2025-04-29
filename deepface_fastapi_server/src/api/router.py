@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from src.api.endpoints import processing, blacklist, processed_images
+from api.endpoints import processing, blacklist, processed_images
 
 api_router = APIRouter()
 

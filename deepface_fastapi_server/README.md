@@ -45,6 +45,8 @@ deepface_fastapi_server/
 
 There are two primary ways to run the server: using Docker (recommended for consistency) or running locally.
 
+**Important:** Before running, ensure you have configured the necessary environment variables, especially for the chosen `FACE_PROCESSING_BACKEND` (see Configuration section).
+
 ### Option 1: Running with Docker (Recommended)
 
 **Prerequisites:**
@@ -80,6 +82,8 @@ There are two primary ways to run the server: using Docker (recommended for cons
 
 *   Python 3.8+ (matching the version in the Dockerfile is recommended, e.g., 3.9)
 *   `pip` and `venv`
+*   **AWS Credentials** (if using `aws_rekognition` backend): Configure via environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` [optional]) or an IAM role.
+*   **AWS Resources** (if using `aws_rekognition` backend): An S3 bucket specified by `AWS_S3_BUCKET_NAME` must exist. The Rekognition collection (`AWS_REKOGNITION_COLLECTION_ID`) will be created automatically if it doesn't exist.
 
 **Steps:**
 
@@ -297,15 +301,44 @@ All endpoints are prefixed with `/api/v1`.
 
 ## Configuration
 
-Default settings for DeepFace (model, detector, metric) are set in `src/config.py`. These can be overridden:
+Configuration settings are primarily managed via environment variables, checked in `src/config.py`.
 
-1.  **Via Environment Variables:** Set environment variables (e.g., in your shell before running locally, or in `docker-compose.yml`).
-2.  **Via Request Parameters:** The `/process-images` endpoint accepts optional `detector_backend`, `model_name`, `distance_metric`, and `threshold` fields in the request body.
+**Core Settings:**
+
+*   `FACE_PROCESSING_BACKEND`: Determines the backend used for face analysis. 
+    *   `deepface` (Default): Uses the local DeepFace library. Requires images in `BLACKLIST_DB_PATH`.
+    *   `aws_rekognition`: Uses AWS Rekognition service. Requires AWS credentials and S3 configuration.
+
+**DeepFace Specific Settings (used when `FACE_PROCESSING_BACKEND='deepface'`):**
+
+*   `DETECTOR_BACKEND`: Default face detector for DeepFace (e.g., `retinaface`, `mtcnn`).
+*   `MODEL_NAME`: Default face recognition model for DeepFace (e.g., `Facenet`, `VGG-Face`).
+*   `DISTANCE_METRIC`: Default distance metric for DeepFace (e.g., `cosine`, `euclidean_l2`).
+*   `BLACKLIST_DB_PATH`: Path to the folder containing DeepFace blacklist images (structured with subfolders per ID).
+*   `PROCESSED_IMAGES_OUTPUT_DIR`: Directory where copies of processed images are saved.
+
+**AWS Rekognition Specific Settings (used when `FACE_PROCESSING_BACKEND='aws_rekognition'`):**
+
+*   `AWS_REGION`: The AWS region for Rekognition and S3 services (e.g., `us-east-1`).
+*   `AWS_S3_BUCKET_NAME`: The name of the S3 bucket where blacklist images will be stored.
+*   `AWS_REKOGNITION_COLLECTION_ID`: The ID for the AWS Rekognition collection used for the blacklist.
+*   **AWS Credentials:** Must be configured externally (e.g., environment variables `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, or an IAM Role if running in AWS).
+
+**Overriding Defaults:**
+
+*   **Environment Variables:** Set any of the above variables in your environment (e.g., shell, `.env` file loaded by your process, `docker-compose.yml`) to override defaults.
+*   **Request Parameters:** The `/process-images` endpoint accepts optional `detector_backend`, `model_name`, `distance_metric`, and `threshold` fields in the request body. *Note: These primarily affect the DeepFace backend or how thresholds are interpreted for the AWS backend.* 
 
 ## Limitations & Potential Improvements
 
-*   **Blacklist Image Management:** The blacklist CRUD endpoints now handle image uploads and deletions, storing images in `./blacklist_db/[id]/` and refreshing the DeepFace index automatically.
-*   **DeepFace Representation Refresh:** The index (`.pkl` file) used by `DeepFace.find` is automatically refreshed when adding or deleting entries via the `/api/v1/blacklist` endpoints. Manual changes to the `blacklist_db` folder still require a refresh (e.g., by restarting or calling add/delete).
+*   **Backend Differences:** 
+    *   **Blacklist Storage:** DeepFace uses local folders (`BLACKLIST_DB_PATH`), while AWS uses an S3 bucket (`AWS_S3_BUCKET_NAME`) and a Rekognition Collection.
+    *   **Indexing:** DeepFace requires index refreshes (automatic via API), while AWS manages indexing internally.
+    *   **Result Mapping:** The mapping between AWS Rekognition's similarity score and DeepFace's distance metrics is approximate. Threshold values might need different tuning depending on the active backend.
+    *   **Facial Area in Results:** The `/process-images` response structure was slightly adapted. It now returns a single `DetectedFaceResult` per image (if matches are found), containing all matches. The `facial_area` in this result typically corresponds to the bounding box of the face *found in the input image* that generated the matches (specifically, the box from the first match in the list). This differs from the previous implementation which could list multiple detected faces separately.
+*   **AWS Cost:** Using the `aws_rekognition` backend incurs AWS service costs for Rekognition API calls and S3 storage.
+*   **Local File Storage (AWS Mode):** Currently, images uploaded via the blacklist API are still saved locally *before* being uploaded to S3 in AWS mode. This local copy could potentially be removed after successful S3 upload and indexing to save disk space, if not needed for other purposes.
+*   **DeepFace Representation Refresh:** The index (`.pkl` file) used by `DeepFace.find` is automatically refreshed when adding or deleting entries via the `/api/v1/blacklist` endpoints **when using the `deepface` backend**. Manual changes to the `blacklist_db` folder still require a refresh.
 *   **Alternative Blacklist Comparison:** For very large blacklists, calling `DeepFace.find` on each request might be inefficient. Consider implementing the alternative approach: pre-calculate embeddings for the blacklist (using `DeepFace.represent`) and store them (e.g., in memory, files, or a vector database). Then, in the processing endpoint, get the embedding for the input face and compare it directly against the loaded blacklist embeddings using distance metrics (`DeepFace.verify` logic or `scipy.spatial.distance`).
 *   **Database:** Uses SQLite for simplicity. For production or higher concurrency, consider switching to PostgreSQL with an async driver (`psycopg[binary]`) and potentially `pgvector` for storing embeddings directly in the database.
 *   **Results Querying:** The API doesn't currently expose endpoints to query the saved processing results from the `processed_images` table. This could be added if needed.

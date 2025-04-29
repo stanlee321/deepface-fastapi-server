@@ -1,30 +1,13 @@
-from fastapi import APIRouter, HTTPException, Query, status
-from typing import List, Optional, Any
+from fastapi import APIRouter, Query
 import json
 import logging
 from pydantic import BaseModel
 
-from src.crud import processed_image_crud
-from src.models import ImageProcessingResult # Re-use this for structure, although we load from JSON
+from crud import processed_image_crud
+from models import PaginatedProcessedImagesResponse, ProcessedImageRecord
 
 log = logging.getLogger(__name__)
 router = APIRouter()
-
-# Define a model for the list response to include pagination info
-class ProcessedImageRecord(ImageProcessingResult):
-    # Inherits fields from ImageProcessingResult via JSON loading
-    # Add DB specific fields we want to expose
-    db_id: int
-    saved_image_path: str
-    processing_timestamp: Any # Keep Any for flexibility from DB
-    has_blacklist_match: bool
-    # result_json: str # Probably don't need to expose raw JSON
-
-class PaginatedProcessedImagesResponse(BaseModel): # Need BaseModel import
-    total_items: int
-    items: List[ProcessedImageRecord]
-    limit: int
-    offset: int
 
 
 @router.get("/", response_model=PaginatedProcessedImagesResponse) # Define response model
