@@ -220,6 +220,13 @@ All endpoints are prefixed with `/api/v1`.
     *   **Response:** (`200 OK`) A list containing details of processed images and their results.
     *   **Implementation Details:** This endpoint would need to be added to `src/api/endpoints/processing.py` and query the `processed_images` table in `blacklist.db` using the `processed_image_crud.py` functions, applying the skip/limit logic.
 
+    CURL Example:
+
+    ```bash
+
+    curl http://localhost:8000/api/v1/process/process-results?skip=0&limit=100
+    ```
+
 **Blacklist Management (`/blacklist`)**
 
 *   `POST /`
