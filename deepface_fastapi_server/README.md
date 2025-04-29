@@ -212,6 +212,14 @@ All endpoints are prefixed with `/api/v1`.
         *   Input images can be file paths *accessible from the server environment* (local path when running locally, path inside container when running in Docker), public URLs, or base64 encoded strings.
         *   Uses `asyncio.gather` internally, which provides concurrency for I/O tasks like downloading URLs but not true CPU parallelism for DeepFace model inference.
 
+*   `GET /process-results` (**Note: Not Yet Implemented**)
+    *   **Purpose:** (Future Enhancement) Retrieve a paginated list of previously processed image results stored in the database.
+    *   **Request Query Parameters:**
+        *   `skip` (int, optional, default=0): Number of records to skip for pagination.
+        *   `limit` (int, optional, default=100): Maximum number of records to return.
+    *   **Response:** (`200 OK`) A list containing details of processed images and their results.
+    *   **Implementation Details:** This endpoint would need to be added to `src/api/endpoints/processing.py` and query the `processed_images` table in `blacklist.db` using the `processed_image_crud.py` functions, applying the skip/limit logic.
+
 **Blacklist Management (`/blacklist`)**
 
 *   `POST /`
