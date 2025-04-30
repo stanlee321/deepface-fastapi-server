@@ -78,7 +78,14 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
                     break
                 else:
                     log.warning(f"Skipping face {i} in response due to missing/invalid facial_area or confidence score.")
-                    return []
+                    result_obj = ImageProcessingResult(
+                        image_path_or_identifier=img_input[:100] + ("..." if len(img_input) > 100 else ""),
+                        faces=[], # Empty faces list
+                        error=error_msg,
+                                saved_image_path=None, # Indicate save failed
+                                has_blacklist_match=False # Default
+                            )
+                    return result_obj
 
             except Exception as item_err:
                 log.error(f"Error processing detected face data item {i}: {item_err}. Data: {face_data}")
