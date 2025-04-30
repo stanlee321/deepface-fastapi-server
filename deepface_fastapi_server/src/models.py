@@ -117,3 +117,18 @@ class PaginatedProcessedImagesResponse(BaseModel):
     limit: int
     offset: int
 
+# --- Face Detection Endpoint Models ---
+
+class DetectFaceRequest(BaseModel):
+    image: str = Field(..., description="Single image input: path, public URL, or base64 encoded string.")
+    # Optional override for detector, otherwise uses config default
+    detector_backend: Optional[str] = None
+
+class DetectFaceResponseItem(BaseModel):
+    # Corresponds roughly to one item from DeepFace.extract_faces
+    facial_area: FacialArea # Reuse existing model, already allows optional/float coords
+    confidence: Optional[float] = None # Confidence score from the detector
+
+# The response will be a list of these items
+# No need for a separate wrapper model if just returning List[DetectFaceResponseItem]
+

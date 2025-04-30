@@ -35,6 +35,56 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
     first_match_face_area: Optional[FacialArea] = None # Initialize here
 
     try:
+        
+        # First check if face exists in the image
+        log.info(f"Extracting faces from image: {img_input[:10]}... with detector: {request_params.detector_backend or settings.DETECTOR_BACKEND}")
+        detected_faces_data = face_crud.extract_faces_from_image(
+            img_data=img_input,
+            detector_backend=request_params.detector_backend or settings.DETECTOR_BACKEND,
+            align=False, # Alignment not typically needed just for detection boxes
+            enforce_detection=False # Return empty list if no face found
+        )
+
+        if not detected_faces_data:
+            log.info("No faces detected in the provided image.")
+            return []
+
+        # Map the raw results to the response model
+        for i, face_data in enumerate(detected_faces_data):
+            try:
+                facial_area_data = face_data.get('facial_area')
+                confidence_score = face_data.get('confidence')
+
+                # Validate/create FacialArea model
+                face_area_obj = None
+                if isinstance(facial_area_data, dict):
+                    try:
+                         face_area_obj = FacialArea.model_validate(facial_area_data)
+                    except Exception as area_val_err:
+                        #log.warning(f"Could not validate facial_area for face {i}: {area_val_err}. Area data: {facial_area_data}")
+                        pass
+                else:
+                    log.warning(f"Facial area data missing or invalid type for face {i}")
+
+                # Only add if we have a valid facial area
+                if face_area_obj and confidence_score and confidence_score > settings.CONFIDENCE_THRESHOLD:
+                    # image_faces_results.append(
+                    #     DetectedFaceResult(
+                    #         face_index=i,
+                    #         facial_area=face_area_obj,
+                    #         confidence=confidence_score
+                    #     )
+                    # )
+                    break
+                else:
+                    log.warning(f"Skipping face {i} in response due to missing/invalid facial_area or confidence score.")
+                    return []
+
+            except Exception as item_err:
+                log.error(f"Error processing detected face data item {i}: {item_err}. Data: {face_data}")
+                # Optionally skip this item or raise a more specific error?
+                
+        log.info(f"Found {len(image_faces_results)} faces in image: {img_input[:10]}...")
         # --- A. Save a copy of the incoming image --- 
         saved_image_path = await face_crud.save_incoming_image(img_input)
         if not saved_image_path:
@@ -56,7 +106,7 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
         # It handles backend switching and returns a consistent List[Dict] format
         matches = await face_processing_service.find_blacklist_matches(
             img_data=img_input, # Pass original identifier
-            threshold=request_params.threshold # Pass optional threshold override
+            threshold=request_params.threshold  or settings.THRESHOLD_BLACKLIST # Pass optional threshold override
         )
 
         # --- C. Construct Response from Matches --- 

@@ -229,6 +229,48 @@ All endpoints are prefixed with `/api/v1`.
         curl http://localhost:8000/api/v1/processed-images/?offset=0&limit=10
         ```
 
+**Face Detection (`/detect`)**
+
+*   `POST /detect-face`
+    *   **Purpose:** Detects faces in a single image and returns their coordinates.
+    *   **Request Body:** (`application/json`)
+        ```json
+        {
+          "image": "/path/on/server/image1.jpg", // Or URL, or base64 string
+          "detector_backend": "mtcnn" // Optional: Override default detector from config
+        }
+        ```
+    *   **Response:** (`200 OK`) A list of detected faces.
+        ```json
+        [
+          {
+            "facial_area": {
+              "x": 120,
+              "y": 55,
+              "w": 90,
+              "h": 115,
+              "left_eye": null,
+              "right_eye": null,
+              "nose": null,
+              "mouth_left": null,
+              "mouth_right": null
+            },
+            "confidence": 0.987
+          }
+          // ... other detected faces
+        ]
+        ```
+    *   **Curl Example (using base64):**
+        ```bash
+        IMG_BASE64=$(base64 /path/to/your/image.jpg)
+
+        curl -X POST http://localhost:8000/api/v1/detect/detect-face \
+        -H "Content-Type: application/json" \
+        -d '{
+              "image": "data:image/jpeg;base64,'"$IMG_BASE64"'"
+            }'
+        ```
+
 **Blacklist Management (`/blacklist`)**
 
 *   `POST /`
