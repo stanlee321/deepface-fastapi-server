@@ -66,10 +66,10 @@ class Settings(BaseSettings):
     CROPPED_FACE_PADDING_RATIO: float = os.getenv("CROPPED_FACE_PADDING_RATIO", 0.40)
     
     # --- Confidence Threshold ---
-    CONFIDENCE_THRESHOLD: float = os.getenv("CONFIDENCE_THRESHOLD", 0.80)
+    DETECTION_CONFIDENCE_THRESHOLD: float = os.getenv("DETECTION_CONFIDENCE_THRESHOLD", 0.80)
     
     # --- Blacklist Threshold ---
-    THRESHOLD_BLACKLIST: float = os.getenv("THRESHOLD_BLACKLIST", 0.80)
+    BLACKLIST_CONFIDENCE_THRESHOLD: float = os.getenv("BLACKLIST_CONFIDENCE_THRESHOLD", 0.80)
 
     # --- Pydantic Settings Configuration ---
     class Config:

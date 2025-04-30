@@ -48,7 +48,7 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
         if not detected_faces_data:
             log.info("No faces detected in the provided image.")
             return []
-
+        log.info(f"Detected {detected_faces_data} faces in image: {img_input[-10:]}...")
         # Map the raw results to the response model
         for i, face_data in enumerate(detected_faces_data):
             try:
@@ -61,13 +61,14 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
                     try:
                          face_area_obj = FacialArea.model_validate(facial_area_data)
                     except Exception as area_val_err:
-                        #log.warning(f"Could not validate facial_area for face {i}: {area_val_err}. Area data: {facial_area_data}")
+                        log.warning(f"Could not validate facial_area for face {i}: {area_val_err}. Area data: {facial_area_data}")
                         pass
                 else:
                     log.warning(f"Facial area data missing or invalid type for face {i}")
 
+                log.info(f"Face {i} confidence score: {confidence_score}, result: {face_area_obj}")
                 # Only add if we have a valid facial area
-                if face_area_obj and confidence_score and confidence_score > settings.CONFIDENCE_THRESHOLD:
+                if face_area_obj and confidence_score and confidence_score > settings.DETECTION_CONFIDENCE_THRESHOLD:
                     # image_faces_results.append(
                     #     DetectedFaceResult(
                     #         face_index=i,
@@ -113,7 +114,7 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
         # It handles backend switching and returns a consistent List[Dict] format
         matches = await face_processing_service.find_blacklist_matches(
             img_data=img_input, # Pass original identifier
-            threshold=request_params.threshold  or settings.THRESHOLD_BLACKLIST # Pass optional threshold override
+            threshold=request_params.threshold  or settings.BLACKLIST_CONFIDENCE_THRESHOLD # Pass optional threshold override
         )
 
         # --- C. Construct Response from Matches --- 
