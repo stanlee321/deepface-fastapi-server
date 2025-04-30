@@ -48,7 +48,10 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
         if not detected_faces_data:
             log.info("No faces detected in the provided image.")
             return []
-        log.info(f"Detected {detected_faces_data} faces in image: {img_input[:10]}...")
+        
+        faces = [face['facial_area'] for face in detected_faces_data]
+        
+        log.info(f"Detected {len(detected_faces_data)} with facials {faces} faces in image: {img_input[:10]}...")
         # Map the raw results to the response model
         for i, face_data in enumerate(detected_faces_data):
             try:

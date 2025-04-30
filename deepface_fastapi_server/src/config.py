@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     #     'retinaface', 'mediapipe', 'yolov8', 'yolov11s',
     #     'yolov11n', 'yolov11m', 'yunet', 'centerface',
     # ]
-    DETECTOR_BACKEND: str =  os.getenv("DETECTOR_BACKEND", "dlib")
+    DETECTOR_BACKEND: str =  os.getenv("DETECTOR_BACKEND", "mtcnn")
     
     # models = [
     #     "VGG-Face", "Facenet", "Facenet512", "OpenFace", "DeepFace",
