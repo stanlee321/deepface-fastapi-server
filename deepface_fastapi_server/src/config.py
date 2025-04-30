@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     # --- Blacklist Configuration ---
     # Path for DeepFace backend's image folder structure
     # NOTE: Default path might need adjustment depending on deployment.
-    BLACKLIST_DB_PATH: str = os.getenv("BLACKLIST_DB_PATH", "/Users/stanleysalvatierra/Desktop/2024/lucam/face/deepface_fastapi_server/blacklist_db")
+    BLACKLIST_DB_PATH: str = os.getenv("BLACKLIST_DB_PATH","")
 
     # --- AWS Rekognition Configuration (Used when FACE_PROCESSING_BACKEND='aws_rekognition') ---
     AWS_REGION: str = os.getenv("AWS_REGION", "us-east-1")
@@ -37,9 +37,9 @@ class Settings(BaseSettings):
     # --- Output Configuration ---
     # Directory to save copies of processed images
     # NOTE: Default path might need adjustment depending on deployment.
-    PROCESSED_IMAGES_OUTPUT_DIR: str = os.getenv("PROCESSED_IMAGES_OUTPUT_DIR", "/Users/stanleysalvatierra/Desktop/2024/lucam/face/deepface_fastapi_server/processed_images_output")
+    PROCESSED_IMAGES_OUTPUT_DIR: str = os.getenv("PROCESSED_IMAGES_OUTPUT_DIR", "")
     # Directory to save cropped face images (if feature enabled implicitly by logic)
-    CROPPED_FACES_OUTPUT_DIR: str = os.getenv("CROPPED_FACES_OUTPUT_DIR", "/Users/stanleysalvatierra/Desktop/2024/lucam/face/deepface_fastapi_server/cropped_faces_output")
+    CROPPED_FACES_OUTPUT_DIR: str = os.getenv("CROPPED_FACES_OUTPUT_DIR", "")
 
     # Optional: Database URL (if moving away from hardcoded database.py)
     # DATABASE_URL: str = "sqlite+aiosqlite:///./blacklist.db"

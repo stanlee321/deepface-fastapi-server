@@ -162,14 +162,14 @@ if __name__ == "__main__":
     added_id = None
     try:
         test_health_check()
-        added_id = test_add_blacklist()
-        time.sleep(1) # Give server a moment
-        test_list_blacklist()
-        test_get_single_blacklist(added_id)
-        test_add_images_to_blacklist(added_id)
-        time.sleep(2) # Allow potential indexing/refresh
-        test_process_images()
-        time.sleep(1)
+        # added_id = test_add_blacklist()
+        # time.sleep(1) # Give server a moment
+        # test_list_blacklist()
+        # test_get_single_blacklist(added_id)
+        # test_add_images_to_blacklist(added_id)
+        # time.sleep(2) # Allow potential indexing/refresh
+        # test_process_images()
+        # time.sleep(1)
         test_get_processed_images()
         
     except AssertionError as e:

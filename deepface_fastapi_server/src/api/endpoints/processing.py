@@ -5,7 +5,8 @@ import logging
 from tqdm import tqdm
 
 from models import (ProcessImagesRequest, ImageProcessingResult,
-                      DetectedFaceResult, FacialArea, BlacklistMatch)
+                      DetectedFaceResult, FacialArea, BlacklistMatch,
+                      ProcessedImageRecord, PaginatedProcessedImagesResponse)
                       
 # Import the new service layer
 from services import face_processing_service
@@ -163,6 +164,7 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
                         match_status=has_match_flag
                     )
                 except Exception as draw_err:
+                    # Use the module-level logger
                     log.error(f"Failed to execute drawing function: {draw_err}")
         else:
                 log.warning("Cannot draw bounding box: facial area data is not available or invalid.")
@@ -228,16 +230,39 @@ async def get_processed_images_results(
     total = await processed_image_crud.count_processed_images()
     
     # Validate results against the Pydantic model used for DB storage/retrieval
-    # Assuming get_processed_images returns list of ProcessedImageDB
-    validated_items = [
-        ImageProcessingResult.model_validate(item.result_data) 
-        for item in results if item.result_data
-    ]
-    
+    # Assuming get_processed_images returns list of DB records (RowProxy/dict)
+    # Each 'item' has fields like id, processing_timestamp, result_data (JSON string)
+    validated_items = []
+    for item in results:
+        if item.result_data:
+            try:
+                # Reconstruct the original ImageProcessingResult from the stored JSON
+                # Use model_validate_json as item.result_data is likely a string
+                result_obj = ImageProcessingResult.model_validate_json(item.result_data)
+
+                # Create the final ProcessedImageRecord for the response
+                # Combine data from the DB row and the reconstructed result_obj
+                record = ProcessedImageRecord(
+                    db_id=item.id, # Get ID from the raw DB row
+                    processing_timestamp=item.processing_timestamp, # Get timestamp from raw row
+                    # Fields from the reconstructed result_obj
+                    image_path_or_identifier=result_obj.image_path_or_identifier,
+                    faces=result_obj.faces,
+                    error=result_obj.error,
+                    saved_image_path=result_obj.saved_image_path, 
+                    has_blacklist_match=result_obj.has_blacklist_match,
+                    # Use the value directly from the DB column for the response
+                    cropped_face_path=item.cropped_face_path 
+                )
+                validated_items.append(record)
+            except Exception as e:
+                log.error(f"Error validating result_data for DB record ID {item.id}: {e}")
+                # Optionally skip or add placeholder
+
     # Construct the paginated response
     return PaginatedProcessedImagesResponse(
         total_items=total,
-        items=validated_items,
+        items=validated_items, # This is now List[ProcessedImageRecord]
         offset=offset,
         limit=limit
     ) 

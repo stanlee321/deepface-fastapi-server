@@ -14,7 +14,7 @@ router = APIRouter()
 async def get_processed_images(
     limit: int = Query(20, ge=1, le=100, description="Number of records per page."),
     offset: int = Query(0, ge=0, description="Number of records to skip for pagination.")
-):
+)->PaginatedProcessedImagesResponse:
     """Retrieves a paginated list of processed image records, ordered by newest first."""
     db_records = await processed_image_crud.get_all_processed_images(limit=limit, offset=offset)
     total_count = await processed_image_crud.get_processed_images_count()
@@ -32,6 +32,7 @@ async def get_processed_images(
                 saved_image_path=record.saved_image_path,
                 processing_timestamp=record.processing_timestamp,
                 has_blacklist_match=record.has_blacklist_match,
+                cropped_face_path=record.cropped_face_path,
                 # Fields from the parsed JSON
                 image_path_or_identifier=result_data.get('image_path_or_identifier'),
                 faces=result_data.get('faces', []),
