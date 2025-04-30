@@ -105,7 +105,7 @@ async def find_blacklist_matches(
                  
             # 2. Convert distance threshold (lower is better, 0-1ish) back to AWS Similarity threshold (higher is better, 0-100)
             # Use default 90 if no threshold provided
-            aws_threshold = 90.0 # Default AWS similarity threshold
+            aws_threshold = settings.AWS_THRESHOLD # Default AWS similarity threshold
             if threshold is not None:
                  # Inverse mapping: similarity = 100 - (distance * 100)
                  # Clamp between 0 and 100

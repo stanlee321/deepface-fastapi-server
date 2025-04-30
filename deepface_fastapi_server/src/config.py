@@ -50,6 +50,9 @@ class Settings(BaseSettings):
     # --- Padding Configuration ---
     CROPPED_FACE_PADDING_RATIO: float = os.getenv("CROPPED_FACE_PADDING_RATIO", 0.40)
 
+    # --- AWS Rekognition Configuration ---
+    AWS_THRESHOLD: float = os.getenv("AWS_THRESHOLD", 60.0)
+
     # --- Pydantic Settings Configuration ---
     class Config:
         # Optional: Specify .env file explicitly if needed
