@@ -32,3 +32,5 @@ dotenv # Handled by uvicorn[standard], but listed explicitly if needed elsewhere
 
 # Add other specific dependencies below as needed
 pydantic_settings
+
+dlib

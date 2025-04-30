@@ -92,7 +92,7 @@ def extract_faces_from_image(
     if processed_input is None:
          # If input was a string and couldn't be resolved
          if isinstance(img_data, str):
-              logging.error(f"Could not resolve image input: {img_data}")
+            #   logging.error(f"Could not resolve image input: {img_data}")
               # Raise an error or return empty list based on desired behavior
               # For now, returning empty list to avoid breaking batch processing
               return [] 
@@ -115,8 +115,8 @@ def extract_faces_from_image(
         return faces if faces else []
     except Exception as e:
         # Log the specific image identifier if possible
-        img_identifier = img_data if isinstance(img_data, str) else "numpy_array"
-        logging.error(f"Error in DeepFace extract_faces for {img_identifier}: {e}")
+        # img_identifier = img_data if isinstance(img_data, str) else "numpy_array"
+        logging.error(f"Error in DeepFace extract_faces for image: {str(e)[:120]}")
         return [] # Return empty list on error
 
 def find_matches_in_blacklist(

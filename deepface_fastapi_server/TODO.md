@@ -73,4 +73,14 @@ This document outlines the tasks required to integrate AWS Rekognition as an alt
     - [x] If `facial_area` exists, call `crop_and_save_face`.
     - [x] Determine path to save in DB (cropped path or original path if crop fails/no area).
     - [x] Pass the determined path to `add_processed_image`.
-    - [x] Include the determined path in the returned `ImageProcessingResult`. 
+    - [x] Include the determined path in the returned `ImageProcessingResult`.
+
+## Phase 5: Dedicated Face Detection Endpoint
+
+- [x] **Models (`src/models.py`):** Define `DetectFaceRequest` and `DetectFaceResponseItem` models.
+- [x] **Detection Endpoint (`src/api/endpoints/detection.py`):** Create new file and implement `POST /detect-face` endpoint.
+    - [x] Use `face_crud.extract_faces_from_image` for detection logic.
+    - [x] Use configured `settings.DETECTOR_BACKEND`.
+    - [x] Map results to `DetectFaceResponse`.
+- [x] **Router (`src/api/router.py`):** Include the new detection router.
+- [x] **Documentation (`README.md`):** Document the new `/detect-face` endpoint. 

@@ -12,8 +12,23 @@ class Settings(BaseSettings):
     FACE_PROCESSING_BACKEND: Literal['deepface', 'aws_rekognition'] = os.getenv("FACE_PROCESSING_BACKEND", "deepface")
 
     # --- DeepFace Configuration (Used when FACE_PROCESSING_BACKEND='deepface') ---
-    DETECTOR_BACKEND: str =  os.getenv("DETECTOR_BACKEND", "retinaface")
-    MODEL_NAME: str = os.getenv("MODEL_NAME", "Facenet")
+    
+    # backends = [
+    #     'opencv', 'ssd', 'dlib', 'mtcnn', 'fastmtcnn',
+    #     'retinaface', 'mediapipe', 'yolov8', 'yolov11s',
+    #     'yolov11n', 'yolov11m', 'yunet', 'centerface',
+    # ]
+    DETECTOR_BACKEND: str =  os.getenv("DETECTOR_BACKEND", "dlib")
+    
+    # models = [
+    #     "VGG-Face", "Facenet", "Facenet512", "OpenFace", "DeepFace",
+    #     "DeepID", "ArcFace", "Dlib", "SFace", "GhostFaceNet",
+    #     "Buffalo_L",
+    # ]
+
+    MODEL_NAME: str = os.getenv("MODEL_NAME", "Dlib")
+    
+    # metrics = ["cosine", "euclidean", "euclidean_l2", "angular"]
     DISTANCE_METRIC: str = os.getenv("DISTANCE_METRIC", "cosine")
 
     # --- Blacklist Configuration ---
@@ -49,6 +64,12 @@ class Settings(BaseSettings):
 
     # --- Padding Configuration ---
     CROPPED_FACE_PADDING_RATIO: float = os.getenv("CROPPED_FACE_PADDING_RATIO", 0.40)
+    
+    # --- Confidence Threshold ---
+    CONFIDENCE_THRESHOLD: float = os.getenv("CONFIDENCE_THRESHOLD", 0.80)
+    
+    # --- Blacklist Threshold ---
+    THRESHOLD_BLACKLIST: float = os.getenv("THRESHOLD_BLACKLIST", 0.80)
 
     # --- Pydantic Settings Configuration ---
     class Config:
