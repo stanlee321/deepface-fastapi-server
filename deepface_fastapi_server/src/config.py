@@ -71,6 +71,9 @@ class Settings(BaseSettings):
     # --- Blacklist Threshold ---
     BLACKLIST_CONFIDENCE_THRESHOLD: float = os.getenv("BLACKLIST_CONFIDENCE_THRESHOLD", 0.80)
 
+    # --- AWS Rekognition Configuration ---
+    AWS_THRESHOLD: float = os.getenv("AWS_THRESHOLD", 60.0)
+
     # --- Pydantic Settings Configuration ---
     class Config:
         # Optional: Specify .env file explicitly if needed
