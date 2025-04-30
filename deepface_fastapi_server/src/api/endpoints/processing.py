@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, HTTPException, Body, status
 from typing import List, Optional
 # import asyncio # For potential parallel processing
@@ -26,6 +27,9 @@ from models import PaginatedProcessedImagesResponse # Import the pagination mode
 
 router = APIRouter()
 log = logging.getLogger(__name__)
+
+os.makedirs(settings.PROCESSED_IMAGES_OUTPUT_DIR, exist_ok=True)
+os.makedirs(settings.CROPPED_FACES_OUTPUT_DIR, exist_ok=True)
 
 async def process_single_image(img_input: str, request_params: ProcessImagesRequest) -> ImageProcessingResult:
     """Helper function to process a single image (path, url, or base64)."""
