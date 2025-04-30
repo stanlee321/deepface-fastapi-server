@@ -48,7 +48,7 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
         if not detected_faces_data:
             log.info("No faces detected in the provided image.")
             return []
-        log.info(f"Detected {detected_faces_data} faces in image: {img_input[-10:]}...")
+        log.info(f"Detected {detected_faces_data} faces in image: {img_input[:10]}...")
         # Map the raw results to the response model
         for i, face_data in enumerate(detected_faces_data):
             try:
@@ -92,8 +92,8 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
                 log.error(f"Error processing detected face data item {i}: {item_err}. Data: {face_data}")
                 # Optionally skip this item or raise a more specific error?
                 
-        log.info(f"Found {len(image_faces_results)} faces in image: {img_input[:10]}...")
         # --- A. Save a copy of the incoming image --- 
+        log.info(f"Saving image: {img_input[:10]}...")
         saved_image_path = await face_crud.save_incoming_image(img_input)
         if not saved_image_path:
             error_msg = "Failed to save or process input image."
@@ -184,7 +184,7 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
 
     # --- D. Construct Final Result Object --- 
     final_cropped_face_path = None # Initialize path variable
-    
+    log.info(f"image_faces_results: {image_faces_results}")
     # --- Attempt Cropping --- 
     if saved_image_path and image_faces_results and image_faces_results[0].facial_area:
         face_area_to_crop = image_faces_results[0].facial_area
