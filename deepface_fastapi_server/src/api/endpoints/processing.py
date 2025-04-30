@@ -32,6 +32,7 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
     image_faces_results: List[DetectedFaceResult] = [] # Renamed for clarity
     error_msg: Optional[str] = None
     saved_image_path: Optional[str] = None
+    first_match_face_area: Optional[FacialArea] = None # Initialize here
 
     try:
         # --- A. Save a copy of the incoming image --- 
@@ -84,7 +85,6 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
                      # Optionally include partial results or skip this match
                      
             # Extract bounding box from the first match (assuming it represents the main matched face)
-            first_match_face_area = None
             if validated_matches: # Check if we have at least one validated match
                 first_match_data = matches[0] # Get raw dict again for coords
                 try:

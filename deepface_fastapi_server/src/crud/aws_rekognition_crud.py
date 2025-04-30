@@ -269,7 +269,13 @@ async def search_face_aws(collection_id: str, image_bytes: bytes, threshold: flo
 
     except ClientError as e:
         # Handle specific errors like InvalidParameterException (bad image format?)
-        log.exception(f"Error searching faces with AWS Rekognition: {e}")
+        error_code = e.response.get("Error", {}).get("Code")
+        error_message = e.response.get("Error", {}).get("Message", "")
+        if error_code == 'InvalidParameterException' and "no faces in the image" in error_message.lower():
+            log.warning(f"AWS Rekognition SearchFacesByImage failed for input image: No faces detected by AWS.")
+        else:
+            # Log other ClientErrors with full traceback
+            log.exception(f"Error searching faces with AWS Rekognition: {e}")
         # Return empty list on error to maintain function signature
     except Exception as e:
         log.exception(f"Unexpected error during AWS face search: {e}")
