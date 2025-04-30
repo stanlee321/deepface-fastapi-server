@@ -236,7 +236,7 @@ async def save_incoming_image(img_input: str, output_dir: str = settings.PROCESS
     img_extension = ".jpg" # Default extension, try to get better one
     unique_filename = f"{uuid.uuid4()}{img_extension}"
     saved_file_path = os.path.abspath(os.path.join(output_dir, unique_filename))
-
+    
     try:
         if is_url(img_input):
             logging.info(f"Saving image from URL: {img_input}")

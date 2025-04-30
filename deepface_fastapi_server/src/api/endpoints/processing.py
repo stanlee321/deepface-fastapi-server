@@ -123,7 +123,7 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
             img_data=img_input, # Pass original identifier
             threshold=request_params.threshold  or settings.BLACKLIST_CONFIDENCE_THRESHOLD # Pass optional threshold override
         )
-
+        log.info(f"Found {len(matches)} matches in image: with faces {faces}...")
         # --- C. Construct Response from Matches --- 
         # The service function returns matches directly. We need to structure them
         # into the DetectedFaceResult format. This might require adjustment
@@ -139,6 +139,7 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
         
         has_match_flag = False
         if matches:
+            log.info(f"Found {len(matches)} matches in image: {img_input[:50]}...")
             # Create BlacklistMatch models from the dictionaries returned by the service
             validated_matches: List[BlacklistMatch] = []
             for match_dict in matches:
@@ -182,7 +183,18 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
             )
             image_faces_results.append(detected_face)
         else:
-             log.info(f"No blacklist matches found for image: {img_input[:50]}...")
+            log.info(f"No blacklist matches found for image: {img_input[:50]}...")
+            # Sending only base detection results
+            
+            image_faces_results = [
+                DetectedFaceResult(
+                    face_index=0,
+                    facial_area=face['facial_area'],
+                    confidence=face['confidence'],
+                    blacklist_matches=[]
+                )
+                for face in detected_faces_data
+            ]
              # Keep image_faces_results empty
              
     except Exception as e:
@@ -192,6 +204,7 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
     # --- D. Construct Final Result Object --- 
     final_cropped_face_path = None # Initialize path variable
     log.info(f"image_faces_results: {image_faces_results}")
+    
     # --- Attempt Cropping --- 
     if saved_image_path and image_faces_results and image_faces_results[0].facial_area:
         face_area_to_crop = image_faces_results[0].facial_area
