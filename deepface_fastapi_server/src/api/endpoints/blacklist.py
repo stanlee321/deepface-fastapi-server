@@ -63,6 +63,7 @@ async def add_to_blacklist(
         )
 
     record_id = await blacklist_crud.add_person(payload)
+    log.info(f"DATABASE CHECK 1: add_person called for '{payload.name}'. Returned ID: {record_id}")
     if record_id is None:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to add blacklist entry to database")
 
@@ -134,6 +135,7 @@ async def add_to_blacklist(
     # For AWS, we might store S3 prefix or rely on convention
     relative_image_dir = str(record_id) # Keep local convention for now
     updated_id = await blacklist_crud.update_person(record_id, payload, image_dir_path=relative_image_dir)
+    log.info(f"DATABASE CHECK 2: update_person called for ID {record_id}. Returned ID: {updated_id}")
     # ... (handle update failure if needed)
 
     # 4. Trigger backend-specific post-processing
@@ -149,6 +151,7 @@ async def add_to_blacklist(
         # Optionally: If local files aren't needed after S3 upload, delete person_folder_local?
 
     created_record = await blacklist_crud.get_person(record_id)
+    log.info(f"DATABASE CHECK 3: get_person called for ID {record_id}. Found: {created_record is not None}")
     if not created_record:
          # This case is unlikely if DB add succeeded, but handle defensively
          raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to retrieve created blacklist entry after adding.")

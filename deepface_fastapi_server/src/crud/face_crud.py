@@ -17,6 +17,8 @@ from models import FacialArea
 from config import settings
 
 
+log = logging.getLogger(__name__)
+
 def is_base64(s: str) -> bool:
     """Check if a string is likely base64 encoded."""
     try:
@@ -359,4 +361,112 @@ def draw_bounding_box_on_image(image_path: str, box_coords: FacialArea, match_st
     except ImportError:
          log.warning("OpenCV not installed, cannot draw bounding boxes. Please install opencv-python.")
     except Exception as e:
-        log.exception(f"[Drawing] Error drawing bounding box on {image_path}: {e}") 
+        log.exception(f"[Drawing] Error drawing bounding box on {image_path}: {e}")
+
+# === Image Cropping Utility ===
+
+def crop_and_save_face(original_image_path: str, face_coords: FacialArea, output_dir: str) -> Optional[str]:
+    """Crops a face region from an image and saves it to a specified directory.
+
+    Args:
+        original_image_path: Path to the source image file.
+        face_coords: FacialArea object containing coordinates for the crop.
+        output_dir: Base directory to save the cropped face image.
+
+    Returns:
+        The absolute path to the saved cropped image file, or None on failure.
+    """
+    try:
+        # Ensure OpenCV is available
+        global cv2
+        if 'cv2' not in globals():
+            import cv2
+
+        img = cv2.imread(original_image_path)
+        if img is None:
+            log.error(f"[Crop] Failed to read image for cropping: {original_image_path}")
+            return None
+            
+        img_h, img_w = img.shape[:2]
+        
+        # Get coordinates
+        x = face_coords.x
+        y = face_coords.y
+        w = face_coords.w
+        h = face_coords.h
+        
+        if None in [x, y, w, h]:
+             log.warning(f"[Crop] Skipping crop for {original_image_path}, missing coordinates.")
+             return None
+
+        # Convert fractional coordinates (0.0-1.0) to absolute pixel values if necessary
+        if isinstance(x, float) and x <= 1.0: x = int(x * img_w)
+        if isinstance(y, float) and y <= 1.0: y = int(y * img_h)
+        if isinstance(w, float) and w <= 1.0: w = int(w * img_w)
+        if isinstance(h, float) and h <= 1.0: h = int(h * img_h)
+        
+        # Ensure coordinates are integers for slicing
+        try:
+             x, y, w, h = int(x), int(y), int(w), int(h)
+        except (TypeError, ValueError):
+            log.error(f"[Crop] Invalid coordinate types for {original_image_path}: x={x}, y={y}, w={w}, h={h}")
+            return None
+
+        # === Add Padding ===
+        padding_ratio = settings.CROPPED_FACE_PADDING_RATIO #padding
+        padding_w = int(w * padding_ratio)
+        padding_h = int(h * padding_ratio)
+        
+        # Adjust coordinates (subtract half padding from top-left, add full to size)
+        padded_x = x - (padding_w // 2)
+        padded_y = y - (padding_h // 2)
+        padded_w = w + padding_w
+        padded_h = h + padding_h
+        # === End Padding ===
+        
+        # Calculate crop boundaries using padded coordinates, ensuring they are within image dimensions
+        x1 = max(0, padded_x)
+        y1 = max(0, padded_y)
+        x2 = min(img_w, padded_x + padded_w) 
+        y2 = min(img_h, padded_y + padded_h)
+        
+        # Check if calculated crop area is valid
+        if x1 >= x2 or y1 >= y2:
+            log.warning(f"[Crop] Invalid crop dimensions for {original_image_path} after clamping. x1={x1}, y1={y1}, x2={x2}, y2={y2}")
+            return None
+
+        # Perform cropping
+        cropped_face = img[y1:y2, x1:x2]
+
+        # Create output directory if it doesn't exist
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Generate unique filename for the cropped image
+        original_filename = os.path.splitext(os.path.basename(original_image_path))[0]
+        # Use the UUID from the original saved name if possible (remove extension first)
+        try:
+            original_uuid_part = original_filename.split('_')[0] if '_' in original_filename else original_filename
+            if len(uuid.UUID(original_uuid_part).hex) == 32:
+                 crop_filename = f"{original_uuid_part}_cropped.png" # Use original UUID + suffix
+            else:
+                 raise ValueError("Not a valid UUID part")
+        except ValueError:
+            crop_filename = f"{uuid.uuid4()}_cropped.png" # Fallback to new UUID
+            
+        output_path = os.path.abspath(os.path.join(output_dir, crop_filename))
+
+        # Save the cropped image
+        success = cv2.imwrite(output_path, cropped_face)
+        if success:
+            log.info(f"[Crop] Successfully saved cropped face to: {output_path}")
+            return output_path
+        else:
+            log.error(f"[Crop] Failed to save cropped face image: {output_path}")
+            return None
+
+    except ImportError:
+         log.warning("OpenCV not installed, cannot crop faces. Please install opencv-python.")
+         return None
+    except Exception as e:
+        log.exception(f"[Crop] Error cropping face from {original_image_path}: {e}")
+        return None 

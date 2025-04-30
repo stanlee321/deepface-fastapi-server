@@ -38,12 +38,17 @@ class Settings(BaseSettings):
     # Directory to save copies of processed images
     # NOTE: Default path might need adjustment depending on deployment.
     PROCESSED_IMAGES_OUTPUT_DIR: str = os.getenv("PROCESSED_IMAGES_OUTPUT_DIR", "/Users/stanleysalvatierra/Desktop/2024/lucam/face/deepface_fastapi_server/processed_images_output")
+    # Directory to save cropped face images (if feature enabled implicitly by logic)
+    CROPPED_FACES_OUTPUT_DIR: str = os.getenv("CROPPED_FACES_OUTPUT_DIR", "/Users/stanleysalvatierra/Desktop/2024/lucam/face/deepface_fastapi_server/cropped_faces_output")
 
     # Optional: Database URL (if moving away from hardcoded database.py)
     # DATABASE_URL: str = "sqlite+aiosqlite:///./blacklist.db"
 
     # --- Feature Flags ---
     DRAW_BOUNDING_BOXES: bool = os.getenv("DRAW_BOUNDING_BOXES", "true").lower() == "true"
+
+    # --- Padding Configuration ---
+    CROPPED_FACE_PADDING_RATIO: float = os.getenv("CROPPED_FACE_PADDING_RATIO", 0.40)
 
     # --- Pydantic Settings Configuration ---
     class Config:

@@ -180,6 +180,6 @@ if __name__ == "__main__":
         # Cleanup: Delete the entry created during the test
         if added_id:
             print("--- Cleaning up created blacklist entry ---")
-            test_delete_blacklist(added_id)
+            # test_delete_blacklist(added_id)
             
     print("\nAPI tests completed.") 

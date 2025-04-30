@@ -68,6 +68,7 @@ class ImageProcessingResult(BaseModel):
     saved_image_path: Optional[str] = None # Path where image copy was saved
     processing_timestamp: Optional[Any] = None # Keep Any or use datetime if validated
     has_blacklist_match: Optional[bool] = None # Flag indicating if any match occurred
+    cropped_face_path: Optional[str] = None # Path to the saved cropped face image
 
 class ProcessImagesRequest(BaseModel):
     # Allow providing image paths, base64 strings, or URLs
@@ -101,7 +102,7 @@ class BlacklistRecord(BlacklistBase):
         
 # Define a model for the list response to include pagination info
 class ProcessedImageRecord(ImageProcessingResult):
-    # Inherits: image_path_or_identifier, faces, error, saved_image_path, has_blacklist_match
+    # Inherits: image_path_or_identifier, faces, error, saved_image_path, has_blacklist_match, cropped_face_path
     # Add the DB specific fields that are always present when retrieved
     db_id: int 
     processing_timestamp: Any # Keep Any for flexibility from DB

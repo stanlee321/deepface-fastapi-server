@@ -59,4 +59,18 @@ This document outlines the tasks required to integrate AWS Rekognition as an alt
 - [x] **Documentation (`README.md`):**
     - [x] Add documentation for the new `FACE_PROCESSING_BACKEND` setting.
     - [x] Add documentation for required AWS configuration variables (`AWS_REGION`, `AWS_S3_BUCKET_NAME`, `AWS_REKOGNITION_COLLECTION_ID`) and credential setup.
-    - [x] Mention any behavioral differences between modes if unavoidable (e.g., exact confidence/distance scales might differ slightly even after mapping). 
+    - [x] Mention any behavioral differences between modes if unavoidable (e.g., exact confidence/distance scales might differ slightly even after mapping).
+
+## Phase 4: Save Cropped Face Images (Optional Feature)
+
+- [x] **Configuration (`src/config.py`):** Add `CROPPED_FACES_OUTPUT_DIR` setting.
+- [x] **Database Schema (`src/database.py`):** Add `cropped_face_path` column (nullable string) to `processed_images_table`.
+- [x] **Pydantic Models (`src/models.py`):** Add `cropped_face_path: Optional[str]` to `ImageProcessingResult` and `ProcessedImageRecord`.
+- [x] **Cropping Utility (`src/crud/face_crud.py`):** Implement `crop_and_save_face(original_image_path, face_coords: FacialArea, output_dir)` function using OpenCV.
+- [x] **DB CRUD (`src/crud/processed_image_crud.py`):** Modify `add_processed_image` to accept and save `cropped_face_path`.
+- [x] **Processing Endpoint (`src/api/endpoints/processing.py`):**
+    - [x] In `process_single_image`, after getting results and `facial_area`.
+    - [x] If `facial_area` exists, call `crop_and_save_face`.
+    - [x] Determine path to save in DB (cropped path or original path if crop fails/no area).
+    - [x] Pass the determined path to `add_processed_image`.
+    - [x] Include the determined path in the returned `ImageProcessingResult`. 

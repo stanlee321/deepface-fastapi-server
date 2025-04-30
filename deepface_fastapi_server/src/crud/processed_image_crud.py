@@ -13,7 +13,8 @@ log = logging.getLogger(__name__)
 async def add_processed_image(
     input_identifier: str,
     saved_image_path: str,
-    result: ImageProcessingResult # Use the Pydantic model
+    result: ImageProcessingResult, # Use the Pydantic model
+    cropped_face_path: Optional[str] = None # Add new parameter
 ) -> Optional[int]:
     """Adds a record of a processed image and its results to the database."""
     
@@ -38,7 +39,8 @@ async def add_processed_image(
         saved_image_path=saved_image_path,
         processing_timestamp=datetime.now(), # Use current time
         has_blacklist_match=has_match,
-        result_json=result_json_str
+        result_json=result_json_str,
+        cropped_face_path=cropped_face_path # Save the new path
     )
     
     try:

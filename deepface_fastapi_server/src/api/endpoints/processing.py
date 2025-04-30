@@ -118,39 +118,64 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
         else:
              log.info(f"No blacklist matches found for image: {img_input[:50]}...")
              # Keep image_faces_results empty
-
-        # --- Attempt to Draw Bounding Box if Enabled --- 
-        if settings.DRAW_BOUNDING_BOXES and saved_image_path and first_match_face_area:
-            # Check if first_match_face_area is actually a FacialArea instance
-            if isinstance(first_match_face_area, FacialArea):
-                 log.info(f"Attempting to draw bounding box on {saved_image_path}")
-                 try:
-                     # Call drawing function (fire and forget, or await if made async)
-                     # Making it async requires changes in face_crud and here
-                     # For now, run synchronously within the async endpoint
-                     face_crud.draw_bounding_box_on_image(
-                         image_path=saved_image_path,
-                         box_coords=first_match_face_area,
-                         match_status=has_match_flag
-                     )
-                 except Exception as draw_err:
-                      log.error(f"Failed to execute drawing function: {draw_err}")
-            else:
-                 log.warning("Cannot draw bounding box: facial area data is not available or invalid.")
-        elif settings.DRAW_BOUNDING_BOXES:
-             log.info("Skipping bounding box drawing: Flag enabled but no matches or facial area found.")
              
     except Exception as e:
         logging.exception(f"Unhandled error processing image '{img_input[:50]}...': {e}")
         error_msg = f"An unexpected error occurred processing this image."
 
     # --- D. Construct Final Result Object --- 
+    final_cropped_face_path = None # Initialize path variable
+    
+    # --- Attempt Cropping --- 
+    if saved_image_path and image_faces_results and image_faces_results[0].facial_area:
+        face_area_to_crop = image_faces_results[0].facial_area
+        if isinstance(face_area_to_crop, FacialArea):
+            log.info(f"Attempting to crop face from {saved_image_path}")
+            try:
+                # Call cropping utility
+                final_cropped_face_path = face_crud.crop_and_save_face(
+                    original_image_path=saved_image_path,
+                    face_coords=face_area_to_crop,
+                    output_dir=settings.CROPPED_FACES_OUTPUT_DIR
+                )
+            except Exception as crop_err:
+                log.error(f"Failed to execute cropping function: {crop_err}")
+                # Leave final_cropped_face_path as None
+        else:
+             log.warning("Cannot crop face: facial area data is not available or invalid.")
+             
+    # If cropping wasn't attempted or failed, use the original saved path as per requirement
+    if final_cropped_face_path is None:
+         final_cropped_face_path = saved_image_path 
+         
+    # --- Attempt to Draw Bounding Box if Enabled --- 
+    if settings.DRAW_BOUNDING_BOXES and saved_image_path and first_match_face_area:
+        # Check if first_match_face_area is actually a FacialArea instance
+        if isinstance(first_match_face_area, FacialArea):
+                log.info(f"Attempting to draw bounding box on {saved_image_path}")
+                try:
+                    # Call drawing function (fire and forget, or await if made async)
+                    # Making it async requires changes in face_crud and here
+                    # For now, run synchronously within the async endpoint
+                    face_crud.draw_bounding_box_on_image(
+                        image_path=saved_image_path,
+                        box_coords=first_match_face_area,
+                        match_status=has_match_flag
+                    )
+                except Exception as draw_err:
+                    log.error(f"Failed to execute drawing function: {draw_err}")
+        else:
+                log.warning("Cannot draw bounding box: facial area data is not available or invalid.")
+    elif settings.DRAW_BOUNDING_BOXES:
+            log.info("Skipping bounding box drawing: Flag enabled but no matches or facial area found.")
+         
     result_obj = ImageProcessingResult(
         image_path_or_identifier=img_input[:100] + ("..." if len(img_input) > 100 else ""),
         faces=image_faces_results, # Use the potentially single result
         error=error_msg,
         saved_image_path=saved_image_path, # Include path to saved image
-        has_blacklist_match=has_match_flag # Set flag based on if matches were found
+        has_blacklist_match=has_match_flag, # Set flag based on if matches were found
+        cropped_face_path=final_cropped_face_path # Add the determined path
     )
     
     # --- E. Log Result to Database --- 
@@ -158,7 +183,8 @@ async def process_single_image(img_input: str, request_params: ProcessImagesRequ
         await processed_image_crud.add_processed_image(
             input_identifier=img_input[:100] + ("..." if len(img_input) > 100 else ""), # Original identifier (truncated)
             saved_image_path=saved_image_path, # Path where copy was saved
-            result=result_obj # The full result object
+            result=result_obj, # The full result object (includes cropped path now)
+            cropped_face_path=final_cropped_face_path # Pass path explicitly to DB function
         )
     else:
         # This case is handled earlier, but included defensively

@@ -33,7 +33,8 @@ processed_images_table = Table(
     Column("saved_image_path", String(1024), index=True), # Absolute path within container/server
     Column("processing_timestamp", DateTime, default=func.now(), index=True),
     Column("has_blacklist_match", Boolean, default=False, index=True),
-    Column("result_json", TEXT) # Use TEXT for potentially large JSON strings
+    Column("result_json", TEXT), # Use TEXT for potentially large JSON strings
+    Column("cropped_face_path", String(512), nullable=True) # Path to the cropped face image
 )
 
 # Create a synchronous engine for metadata creation if needed (databases doesn't do it)
