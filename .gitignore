@@ -13,5 +13,6 @@ __pycache__
 .keep
 *.pkl
 *.jpeg
-
+*.zip
 *.png
+*.db

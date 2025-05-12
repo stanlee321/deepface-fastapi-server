@@ -66,13 +66,13 @@ class Settings(BaseSettings):
     CROPPED_FACE_PADDING_RATIO: float = os.getenv("CROPPED_FACE_PADDING_RATIO", 0.40)
     
     # --- Confidence Threshold ---
-    DETECTION_CONFIDENCE_THRESHOLD: float = os.getenv("DETECTION_CONFIDENCE_THRESHOLD", 0.80)
+    DETECTION_CONFIDENCE_THRESHOLD: float = os.getenv("DETECTION_CONFIDENCE_THRESHOLD", 0.95)
     
     # --- Blacklist Threshold ---
-    BLACKLIST_CONFIDENCE_THRESHOLD: float = os.getenv("BLACKLIST_CONFIDENCE_THRESHOLD", 0.80)
+    BLACKLIST_CONFIDENCE_THRESHOLD: float = os.getenv("BLACKLIST_CONFIDENCE_THRESHOLD", 0.95)
 
     # --- AWS Rekognition Configuration ---
-    AWS_THRESHOLD: float = os.getenv("AWS_THRESHOLD", 60.0)
+    AWS_THRESHOLD: float = os.getenv("AWS_THRESHOLD", 95.0)
 
     # --- Pydantic Settings Configuration ---
     class Config:
