@@ -390,9 +390,3 @@ Configuration settings are primarily managed via environment variables, checked 
 ## Refs:
 - https://stackoverflow.com/questions/70981334/how-to-install-deepface-python-face-recognition-package-on-m1-mac
 
-
-curl -X POST "https://metabase.ileader.ai/api/v1/create_company" \
-        -H "Content-Type: application/json" \
-        -H "X-API-Key: XXX" \
-        -d '{\n           "company_id": "some-unique-company-identifier-123" \      
-    }'
