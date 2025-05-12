@@ -1,0 +1,15 @@
+requests
+openai
+fastapi
+uvicorn 
+python-multipart
+paho-mqtt
+pytest
+pytest-mock
+pytest-asyncio
+python-dotenv
+pyjwt
+fastapi-mqtt
+pydantic-settings
+httpx
+apscheduler~=3.10
