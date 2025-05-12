@@ -55,6 +55,7 @@ class Settings(BaseSettings):
     PROCESSED_IMAGES_OUTPUT_DIR: str = os.getenv("PROCESSED_IMAGES_OUTPUT_DIR", "")
     # Directory to save cropped face images (if feature enabled implicitly by logic)
     CROPPED_FACES_OUTPUT_DIR: str = os.getenv("CROPPED_FACES_OUTPUT_DIR", "")
+    CROPPED_WEAPONS_OUTPUT_DIR: str = os.getenv("CROPPED_WEAPONS_OUTPUT_DIR", "")
 
     # Optional: Database URL (if moving away from hardcoded database.py)
     # DATABASE_URL: str = "sqlite+aiosqlite:///./blacklist.db"
@@ -70,9 +71,14 @@ class Settings(BaseSettings):
     
     # --- Blacklist Threshold ---
     BLACKLIST_CONFIDENCE_THRESHOLD: float = os.getenv("BLACKLIST_CONFIDENCE_THRESHOLD", 0.80)
-
+    
+    # --- Weapons Detection Backend ---
+    WEAPON_DETECTION_MODEL_PATH: str = os.getenv("WEAPON_DETECTION_MODEL_PATH", "")
+    WEAPON_DETECTION_CONFIDENCE_THRESHOLD: float = os.getenv("WEAPON_DETECTION_CONFIDENCE_THRESHOLD", 0.10)
+    
     # --- AWS Rekognition Configuration ---
     AWS_THRESHOLD: float = os.getenv("AWS_THRESHOLD", 60.0)
+
 
     # --- Pydantic Settings Configuration ---
     class Config:

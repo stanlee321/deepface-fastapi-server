@@ -198,18 +198,47 @@ All endpoints are prefixed with `/api/v1`.
 
         # Option A: tell base64 where the input is
         IMG_BASE64_1=$(base64 -i ../data/1.png)
-        IMG_BASE64_2=$(base64 -i ../data/2.png)
         IMG_BASE64_3=$(base64 -i ../data/3.png)
 
-        curl -X POST http://localhost:8000/api/v1/process/process-images \
+        curl -X POST http://localhost:8000/api/v1/core/process-images \
         -H "Content-Type: application/json" \
         -d '{
+              "app_type": "weapons",
+              "code": "some-unique-code-123",
               "images": [
                 "data:image/png;base64,'"$IMG_BASE64_1"'",
-                "data:image/png;base64,'"$IMG_BASE64_2"'",
                 "data:image/png;base64,'"$IMG_BASE64_3"'"
               ]
             }'
+
+        curl -X POST http://localhost:8000/api/v1/core/process-images \
+        -H "Content-Type: application/json" \
+        -d '{
+              "app_type": "weapons",
+              "code": "some-unique-code-123",
+              "images": [
+                "data:image/png;base64,'"$IMG_BASE64_3"'"
+              ]
+            }'
+
+
+cat > payload.json <<EOF
+{
+    "app_type": "weapons",
+    "code": "some-unique-code-123",
+    "images": [
+        "data:image/png;base64,$IMG_BASE64_1",
+        "data:image/png;base64,$IMG_BASE64_2",
+        "data:image/png;base64,$IMG_BASE64_3"
+    ]
+}
+EOF
+
+curl -X POST http://localhost:8000/api/v1/core/process-images \
+    -H "Content-Type: application/json" \
+    --data @payload.json
+
+
         ```
 
     *   **Notes:**

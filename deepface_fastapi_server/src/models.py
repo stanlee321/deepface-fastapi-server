@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any, Tuple, Union
+from typing import List, Optional, Any, Tuple, Union
 from datetime import datetime # Import datetime
 
 class FacialArea(BaseModel):
@@ -17,6 +17,13 @@ class FacialArea(BaseModel):
 
     # Add validator if needed to ensure coords are present if object is created
     # or convert floats to int if required downstream?
+
+class WeaponArea(BaseModel):
+    # Allow float coordinates for AWS, Custom model might return int
+    x: Optional[Union[int, float]] = None
+    y: Optional[Union[int, float]] = None
+    w: Optional[Union[int, float]] = None
+    h: Optional[Union[int, float]] = None
 
 class BlacklistMatch(BaseModel):
     # Fields directly from DeepFace.find results or AWS mapped results
@@ -59,7 +66,7 @@ class DetectedFaceResult(BaseModel):
     confidence: Optional[float] = None 
     blacklist_matches: List[BlacklistMatch] = []
 
-class ImageProcessingResult(BaseModel):
+class FaceImageProcessingResult(BaseModel):
     image_path_or_identifier: str # Use an identifier if input is not a path
     faces: List[DetectedFaceResult]
     error: Optional[str] = None
@@ -75,6 +82,9 @@ class ProcessImagesRequest(BaseModel):
     # Example: List of strings, validation happens in the endpoint
     images: List[str] = Field(..., description="List of image paths, public URLs, or base64 encoded strings.")
     # Optional parameters to override config
+    code: str = Field(..., description="Internal code for the request.")
+    app_type: str = Field(..., description="Type of application for the request.")
+    
     detector_backend: Optional[str] = None
     model_name: Optional[str] = None
     distance_metric: Optional[str] = None
@@ -101,7 +111,7 @@ class BlacklistRecord(BlacklistBase):
         
         
 # Define a model for the list response to include pagination info
-class ProcessedImageRecord(ImageProcessingResult):
+class ProcessedImageRecord(FaceImageProcessingResult):
     # Inherits: image_path_or_identifier, faces, error, saved_image_path, has_blacklist_match, cropped_face_path
     # Add the DB specific fields that are always present when retrieved
     db_id: int 
@@ -123,6 +133,10 @@ class DetectFaceRequest(BaseModel):
     image: str = Field(..., description="Single image input: path, public URL, or base64 encoded string.")
     # Optional override for detector, otherwise uses config default
     detector_backend: Optional[str] = None
+    
+    # Internal Code
+    code: str = Field(..., description="Internal code for the request.")
+    app_type: str = Field(..., description="Type of application for the request.")
 
 class DetectFaceResponseItem(BaseModel):
     # Corresponds roughly to one item from DeepFace.extract_faces
@@ -132,3 +146,26 @@ class DetectFaceResponseItem(BaseModel):
 # The response will be a list of these items
 # No need for a separate wrapper model if just returning List[DetectFaceResponseItem]
 
+class DetectWeaponsRequest(BaseModel):
+    image: str = Field(..., description="Single image input: path, public URL, or base64 encoded string.")
+    # Optional override for detector, otherwise uses config default
+    detector_backend: Optional[str] = None
+
+    # Internal Code
+    code: str = Field(..., description="Internal code for the request.")
+    app_type: str = Field(..., description="Type of application for the request.")
+
+class DetectWeaponsResponseItem(BaseModel):
+    # Corresponds roughly to one item from DeepFace.extract_faces
+    weapon_area: Optional[WeaponArea] = None # Reuse existing model, already allows optional/float coords
+    confidence: Optional[float] = None # Confidence score from the detector
+
+class WeaponImageProcessingResult(BaseModel):
+    image_path_or_identifier: str # Use an identifier if input is not a path
+    weapons: List[DetectWeaponsResponseItem]
+    error: Optional[str] = None
+    saved_image_path: Optional[str] = None # Path where image copy was saved
+    cropped_weapon_path: Optional[str] = None # Path to the saved cropped weapon image
+
+# The response will be a list of these items
+# No need for a separate wrapper model if just returning List[DetectWeaponsResponseItem]

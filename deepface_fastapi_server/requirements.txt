@@ -33,4 +33,8 @@ dotenv # Handled by uvicorn[standard], but listed explicitly if needed elsewhere
 # Add other specific dependencies below as needed
 pydantic_settings
 
+torch
+torchvision
+ultralytics
+supervision==0.25.1
 dlib

@@ -26,9 +26,6 @@ create_db_and_tables()
 log.info("Database table check complete.")
 
 
-
-
-
 # --- FastAPI App Initialization ---
 app = FastAPI(title=settings.API_TITLE, version=settings.API_VERSION)
 

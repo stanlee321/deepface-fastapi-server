@@ -21,9 +21,6 @@ def ensure_collection(rekog, collection_id):
     except rekog.exceptions.ResourceAlreadyExistsException:
         print("Collection already exists")
 
-
-
-
 def get_rekognition_client():
     """Initializes and returns the Rekognition client."""
     global rekognition_client

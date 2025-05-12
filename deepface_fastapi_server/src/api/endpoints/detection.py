@@ -43,7 +43,7 @@ async def detect_face_endpoint(request: DetectFaceRequest = Body(...)):
                 face_area_obj = None
                 if isinstance(facial_area_data, dict):
                     try:
-                         face_area_obj = FacialArea.model_validate(facial_area_data)
+                        face_area_obj = FacialArea.model_validate(facial_area_data)
                     except Exception as area_val_err:
                         #log.warning(f"Could not validate facial_area for face {i}: {area_val_err}. Area data: {facial_area_data}")
                         pass

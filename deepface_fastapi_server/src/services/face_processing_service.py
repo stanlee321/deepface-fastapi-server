@@ -8,7 +8,7 @@ from config import settings
 # Import CRUD modules for both backends
 from crud import face_crud # DeepFace backend
 from crud import aws_rekognition_crud # AWS Rekognition backend
-from crud.face_crud import resolve_image_input # Reuse helper for input handling
+from crud.common import resolve_image_input # Reuse helper for input handling
 
 log = logging.getLogger(__name__)
 
@@ -89,12 +89,12 @@ async def find_blacklist_matches(
                 # If it's a file path
                 elif face_crud.os.path.exists(resolved_input):
                     with open(resolved_input, 'rb') as f:
-                         img_bytes = f.read()
+                        img_bytes = f.read()
             elif isinstance(resolved_input, np.ndarray):
                  # Convert numpy array (BGR) to bytes (e.g., JPEG format)
                  is_success, buffer = face_crud.cv2.imencode(".jpg", resolved_input)
                  if is_success:
-                     img_bytes = buffer.tobytes()
+                    img_bytes = buffer.tobytes()
                  else:
                     log.error("Failed to encode numpy array to JPG bytes for AWS.")
                     return []

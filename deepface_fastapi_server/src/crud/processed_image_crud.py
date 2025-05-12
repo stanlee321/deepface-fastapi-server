@@ -1,10 +1,10 @@
 import logging
 import json
-from typing import Optional
+from typing import Optional, Union
 from datetime import datetime
 
 from database import database, processed_images_table
-from models import ImageProcessingResult # Import the Pydantic model for type hinting
+from models import FaceImageProcessingResult, WeaponImageProcessingResult # Import the Pydantic model for type hinting
 from sqlalchemy import func
 from sqlalchemy import select
 
@@ -13,17 +13,21 @@ log = logging.getLogger(__name__)
 async def add_processed_image(
     input_identifier: str,
     saved_image_path: str,
-    result: ImageProcessingResult, # Use the Pydantic model
-    cropped_face_path: Optional[str] = None # Add new parameter
+    code: str,
+    app_type: str,
+    result: Union[FaceImageProcessingResult, WeaponImageProcessingResult], # Use the Pydantic model
+    cropped_path: Optional[str] = None # Add new parameter
 ) -> Optional[int]:
     """Adds a record of a processed image and its results to the database."""
     
     # Determine if any blacklist match occurred
     has_match = False
-    if result.faces:
-        for face in result.faces:
-            if face.blacklist_matches:
-                has_match = True
+    
+    if app_type == "faces":
+        if result.faces:
+            for face in result.faces:
+                if face.blacklist_matches:
+                    has_match = True
                 break
                 
     # Serialize the full result model to JSON string
@@ -38,9 +42,11 @@ async def add_processed_image(
         input_identifier=input_identifier, # Truncate
         saved_image_path=saved_image_path,
         processing_timestamp=datetime.now(), # Use current time
+        code=code,
+        app_type=app_type,
         has_blacklist_match=has_match,
         result_json=result_json_str,
-        cropped_face_path=cropped_face_path # Save the new path
+        cropped_path=cropped_path, # Save the new path
     )
     
     try:
