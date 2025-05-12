@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     OPENAI_STORE_RESULTS: bool = os.getenv("OPENAI_STORE_RESULTS", False)
     OPENAI_SYSTEM_PROMPT: str = os.getenv("OPENAI_SYSTEM_PROMPT", "")
 
-    PIPELINE_INTERVAL: int = os.getenv("PIPELINE_INTERVAL", 2)
+    PIPELINE_INTERVAL: int = os.getenv("PIPELINE_INTERVAL", 1)
 
 
     MQTT_BROKER_HOST: str = os.getenv("MQTT_BROKER_HOST", "localhost")
@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     MQTT_CLIENT_ID: str = os.getenv("MQTT_CLIENT_ID", "llm")
 
     MQTT_PROCESS_TOPIC: str = os.getenv("MQTT_PROCESS_TOPIC", "llm/process")
+    TOKENIZERS_PARALLELISM: bool = os.getenv("TOKENIZERS_PARALLELISM", True)
 
     # --- Pydantic Settings Configuration ---
     class Config:

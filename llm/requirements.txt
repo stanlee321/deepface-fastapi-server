@@ -13,3 +13,7 @@ fastapi-mqtt
 pydantic-settings
 httpx
 apscheduler~=3.10
+python-jose[cryptography]
+passlib[bcrypt]
+
+vanna[openai,chromadb,sqlite] # Add this line

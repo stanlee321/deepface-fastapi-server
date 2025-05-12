@@ -1,12 +1,7 @@
-import os
-import shutil
-import json
-
-# Type hint for fast_mqtt object
-from fastapi_mqtt import FastMQTT
+from pathlib import Path
 
 # Import services
-from services.llm import describe_image
+from services.llm import describe_image, encode_image_to_data_uri
 
 # Import settings and db module relative to libs
 from libs import db
@@ -36,7 +31,12 @@ async def process_llm_request_event_data(payload: dict):
 
     # --- Describe Image ---
     try:
-        description = await describe_image(image_url)
+        local_image_path = Path(image_url)
+        if local_image_path and local_image_path.exists():
+            print(f"Encoding local image: {local_image_path}")
+            data_uri_local = encode_image_to_data_uri(local_image_path)
+            if data_uri_local:
+                description = describe_image(data_uri_local)
     except Exception as e:
         print(f"Error describing image for {infraction_code}: {e}")
         db.update_raw_description_status_and_code(db_id, description, 'IMAGE_DESCRIEBER_FAILED', infraction_code)

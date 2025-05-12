@@ -24,7 +24,8 @@ class ImageDescriber:
             api_key: Your OpenAI API key. Defaults to env variable OPENAI_API_KEY.
             model: The OpenAI model to use (e.g., "gpt-4.1-nano", "gpt-4o").
         """
-        self.client = AsyncOpenAI(api_key=api_key) # Reads OPENAI_API_KEY from env if api_key is None
+        # self.client = AsyncOpenAI(api_key=api_key) # Reads OPENAI_API_KEY from env if api_key is None
+        self.client = OpenAI(api_key=api_key)
         self.model = model
         # Basic check for API key
         if not self.client.api_key:
@@ -93,7 +94,7 @@ class ImageDescriber:
         """
         return "\n".join(descriptions)
     
-    async def describe_merged_descriptions(self, descriptions: list[str], 
+    def describe_merged_descriptions(self, descriptions: list[str], 
                                      system_prompt: str = SYSTEM_PROMPT_MERGE, 
                                      temperature: float = 0.4, 
                                      max_tokens: int = 1024, 
@@ -101,14 +102,14 @@ class ImageDescriber:
         """
         Describes a merged description.
         """
-        prompt = "Merge the following descriptions into a single description:"
+        prompt = "Merge the following descriptions into a single description, if it is poosible reference the descriptions in the merged description, if not leave it as it is:"
         
         descriptions_str = "\n".join(descriptions)
         
         try:
-            response = await self.client.chat.completions.create(
+            response = self.client.responses.create(
                 model=self.model,
-                messages=[
+                input=[
                     {
                         "role": "system",
                         "content": system_prompt,
@@ -116,31 +117,37 @@ class ImageDescriber:
                     {
                         "role": "user",
                         "content": [
-                            {"type": "text", "text": prompt},
+                            {"type": "input_text", "text": prompt},
                             {
-                                "type": "text",
+                                "type": "input_text",
                                 "text": descriptions_str,
                             },
                         ],
                     },
                 ],
                 temperature=temperature,
-                max_tokens=max_tokens,
                 top_p=top_p,
             )
-            # Extract the description text safely
-            if response.choices and response.choices[0].message and response.choices[0].message.content:
-                return response.choices[0].message.content.strip()
+            # Extract the description text safely (Updated parsing logic)
+            if response.status == "completed" and response.output and isinstance(response.output, list) and len(response.output) > 0:
+                first_output_message = response.output[0]
+                if hasattr(first_output_message, 'content') and isinstance(first_output_message.content, list) and len(first_output_message.content) > 0:
+                    first_content_item = first_output_message.content[0]
+                    if hasattr(first_content_item, 'text') and isinstance(first_content_item.text, str):
+                        return first_content_item.text.strip()
+                    else:
+                        print("Error: Text field not found or not a string in response.output[0].content[0]")
+                else:
+                    print("Error: Content list not found, not a list, or empty in response.output[0]")
             else:
-                print("Warning: Could not parse description from OpenAI response.")
-                print(f"Full Response: {response}")
-                return None
+                print("Error: Output not found, not a list, or empty in response, or status not completed.")
+            return None # Or raise an error
         except Exception as e:
             # Catch potential API errors or other issues
             print(f"Error during OpenAI API call: {e}")
             return None 
 
-    async def describe_image(
+    def describe_image(
         self,
         image_url: str,
         prompt: str = "Describe the following image:",
@@ -168,9 +175,9 @@ class ImageDescriber:
             return None
 
         try:
-            response = await self.client.chat.completions.create(
+            response = self.client.responses.create(
                 model=self.model,
-                messages=[
+                input=[
                     {
                         "role": "system",
                         "content": system_prompt,
@@ -178,28 +185,36 @@ class ImageDescriber:
                     {
                         "role": "user",
                         "content": [
-                            {"type": "text", "text": prompt},
                             {
-                                "type": "image_url",
-                                "image_url": {
-                                    # Allow detail setting if needed, default is 'auto'
-                                    "url": image_url,
-                                },
+                                "type": "input_text", 
+                                "text": prompt
+                            },
+                            {
+                                "type": "input_image",
+                                "image_url": image_url,
                             },
                         ],
                     },
                 ],
                 temperature=temperature,
-                max_tokens=max_tokens,
                 top_p=top_p,
+                max_output_tokens=2048,
+                store=False
             )
             # Extract the description text safely
-            if response.choices and response.choices[0].message and response.choices[0].message.content:
-                return response.choices[0].message.content.strip()
+            if response.status == "completed" and response.output and isinstance(response.output, list) and len(response.output) > 0:
+                first_output_message = response.output[0]
+                if hasattr(first_output_message, 'content') and isinstance(first_output_message.content, list) and len(first_output_message.content) > 0:
+                    first_content_item = first_output_message.content[0]
+                    if hasattr(first_content_item, 'text') and isinstance(first_content_item.text, str):
+                        return first_content_item.text.strip()
+                    else:
+                        print("Error: Text field not found or not a string in response.output[0].content[0]")
+                else:
+                    print("Error: Content list not found, not a list, or empty in response.output[0]")
             else:
-                print("Warning: Could not parse description from OpenAI response.")
-                print(f"Full Response: {response}")
-                return None
+                print("Error: Output not found, not a list, or empty in response, or status not completed.")
+            return None # Or raise an error
         except Exception as e:
             # Catch potential API errors or other issues
             print(f"Error during OpenAI API call: {e}")

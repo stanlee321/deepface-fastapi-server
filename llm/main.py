@@ -1,5 +1,4 @@
 import json # Added for parsing MQTT payload
-from contextlib import asynccontextmanager # Added for lifespan
 import asyncio # Import asyncio
 
 from jobs.pipeline import pipeline
@@ -22,11 +21,26 @@ from configs import settings
 from libs import db
 
 # Import the specific processing function from the new location
-from libs.event_processor import process_llm_request_event_data
+from libs.event_processor import  process_llm_request_event_data
 
 # Import the specific processing function from the new locatio
 from libs.auth import signJWT
 
+# Import Vanna related functions
+from services.vanna_service import initialize_vanna, get_vanna, MyVanna # MyVanna for type hinting
+
+# Import the models
+from models import NLQueryRequest, NLQueryResponse
+
+# --- Import Pydantic for payload modeling --- 
+from pydantic import BaseModel
+
+# --- Define Pydantic model for smart_process payload --- 
+class SmartProcessPayload(BaseModel):
+    # Define expected fields here, e.g.:
+    request_id: str
+    data: dict
+    # Add other fields as necessary based on what process_smart_request expects
 
 # MQTT Client Setup - Use settings attributes
 mqtt_config = MQTTConfig(
@@ -45,8 +59,7 @@ fast_mqtt = FastMQTT(config=mqtt_config)
 # Initialize the scheduler
 scheduler = AsyncIOScheduler()
 
-# Lifespan manager for MQTT connection and Scheduler
-@asynccontextmanager
+# Refactored Lifespan manager
 async def lifespan(app: FastAPI):
     # Startup: Connect to MQTT broker using the correct method
     print("Connecting to MQTT broker...")
@@ -55,6 +68,13 @@ async def lifespan(app: FastAPI):
 
     # Initialize DB (keep existing logic)
     app.state.db = db.init_db()
+    
+    # Initialize Vanna
+    print("Initializing Vanna service...")
+    # Store the Vanna instance on app.state for easy access if needed elsewhere,
+    # but we'll primarily use the get_vanna() dependency.
+    app.state.vanna_instance = initialize_vanna()
+    print("Vanna service initialized.")
 
     # Add the job to the scheduler
     # Run pipeline every 2 minutes
@@ -114,10 +134,11 @@ async def handle_process_request(client, topic, payload, qos, properties):
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
     """
     Simple login endpoint for demonstration purposes.
-    Replace this with your actual authentication logic.
-    NOTE: Assumes username 'test', password 'test'. JWT_SECRET is loaded via settings.
+    TODO: SECURITY RISK - Replace hardcoded credentials with secure authentication!
+    Checks against username 'test', password 'test'.
     """
     # We need JWT_SECRET here, loaded via settings
+    # TODO: Ensure signJWT has access to settings.JWT_SECRET
     if form_data.username == "test" and form_data.password == "test":
         # Pass the secret from settings to signJWT if needed
         # Adjust signJWT in libs/auth.py to accept the secret as an argument
@@ -128,3 +149,56 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
     else:
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
+
+
+@app.post("/query_processed_descriptions_nl", response_model=NLQueryResponse)
+async def query_processed_descriptions_nl(
+    request_body: NLQueryRequest, 
+    vn: MyVanna = Depends(get_vanna) # Use dependency injection
+):
+    """
+    Ask a natural language question about the processed_descriptions table.
+    """
+    question = request_body.question
+    print(f"Received natural language query: {question}")
+    try:
+        # Vanna's ask method generates SQL, runs it, and can also generate a plot (which we ignore here)
+        # It returns a tuple: (sql, df, fig)
+        # sql, df, fig = vn.ask(question=question) # vn.ask() can also auto-train if successful
+        
+        # Or, for more control:
+        # Add allow_llm_to_see_data=True to let Vanna's LLM inspect data if needed for the query
+        sql_query = vn.generate_sql(question=question, allow_llm_to_see_data=True)
+        print(f"Generated SQL: {sql_query}")
+
+        if not sql_query:
+            return NLQueryResponse(question=question, sql_query="", error="Could not generate SQL query.")
+
+        # Vanna will use its connected SQLite database to run this
+        df_results = vn.run_sql(sql=sql_query)
+        
+        if df_results is not None:
+            # Convert DataFrame to a list of dicts for JSON response
+            results_list = df_results.to_dict(orient="records")
+            # Auto-train Vanna on successful queries
+            vn.train(question=question, sql=sql_query)
+            return NLQueryResponse(question=question, sql_query=sql_query, results=results_list)
+        else:
+            return NLQueryResponse(question=question, sql_query=sql_query, results=None, error="Query executed but returned no data.")
+
+    except Exception as e:
+        print(f"Error processing natural language query: {e}")
+        # Optionally, try to get Vanna to fix the SQL if there's an error
+        # This is a more advanced Vanna feature not shown in the basic README example
+        # For now, just return the error.
+        # if 'sql_query' in locals() and sql_query:
+        #     try:
+        #         # vn.train(question=question, sql=sql_query) # Add to training data even if it failed, for review
+        #         # fixed_sql = vn.fix_sql(question=question, sql=sql_query, error=str(e))
+        #         # ... then try running fixed_sql
+        #     except Exception as fix_e:
+        #          print(f"Error trying to fix SQL: {fix_e}")
+        error_message = str(e)
+        if 'sql_query' not in locals():
+            sql_query = "Error before SQL generation"
+        return NLQueryResponse(question=question, sql_query=sql_query, results=None, error=error_message)

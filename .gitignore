@@ -13,8 +13,10 @@ __pycache__
 .keep
 *.pkl
 *.jpeg
-
+*.db
 *.png
 
 *.pt
 *.mp4
+*.sqlite3
+llm/my_vanna_db/*
