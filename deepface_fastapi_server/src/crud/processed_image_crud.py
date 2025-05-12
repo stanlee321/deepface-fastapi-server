@@ -60,25 +60,40 @@ async def add_processed_image(
 # --- Optional: Add functions to retrieve records if needed --- 
 # async def get_processed_image_by_id(id: int): ...
 
-async def get_all_processed_images(limit: int = 20, offset: int = 0):
+async def get_all_processed_images(limit: int = 20, offset: int = 0, app_type: str = None):
     """Retrieves processed image records with pagination, newest first."""
-    query = (
-        processed_images_table.select()
-        .order_by(processed_images_table.c.processing_timestamp.desc()) # Order by newest first
-        .limit(limit)
-        .offset(offset)
-    )
+    
+    if app_type:
+        query = (
+            processed_images_table.select()
+            .where(processed_images_table.c.app_type == app_type)
+            .order_by(processed_images_table.c.processing_timestamp.desc()) # Order by newest first
+            .limit(limit)
+            .offset(offset)
+        )
+    else:
+        query = (
+            processed_images_table.select()
+            .order_by(processed_images_table.c.processing_timestamp.desc()) # Order by newest first
+            .limit(limit)
+            .offset(offset)
+        )
+        
     try:
         results = await database.fetch_all(query=query)
+        
         return results # Returns list of DB records (RowProxy)
     except Exception as e:
         log.error(f"DB Error retrieving processed images: {e}")
         return [] # Return empty list on error
 
-async def get_processed_images_count() -> int:
+async def get_processed_images_count(app_type: str = None) -> int:
     """Gets the total count of processed image records."""
     # Use select() with func.count() applied to a primary key column for counting
-    query = select(func.count(processed_images_table.c.id)) # Count based on primary key
+    if app_type:
+        query = select(func.count(processed_images_table.c.id)).where(processed_images_table.c.app_type == app_type)
+    else:
+        query = select(func.count(processed_images_table.c.id))
     try:
          # fetch_val will get the value from the first column of the first row
          count = await database.fetch_val(query=query)

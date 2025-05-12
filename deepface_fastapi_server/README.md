@@ -224,7 +224,7 @@ All endpoints are prefixed with `/api/v1`.
 
 cat > payload.json <<EOF
 {
-    "app_type": "weapons",
+    "app_type": "face",
     "code": "some-unique-code-123",
     "images": [
         "data:image/png;base64,$IMG_BASE64_1",
@@ -255,7 +255,8 @@ curl -X POST http://localhost:8000/api/v1/core/process-images \
         *   `items` (list): A list of `ImageProcessingResult`-like objects for the requested page.
     *   **Curl Example:**
         ```bash
-        curl http://localhost:8000/api/v1/processed-images/?offset=0&limit=10
+        curl http://localhost:8000/api/v1/core/processed-images/?offset=0&limit=10
+        curl http://localhost:8000/api/v1/core/processed-images?offset=0&limit=10&app_type=face
         ```
 
 **Face Detection (`/detect`)**
@@ -300,7 +301,7 @@ curl -X POST http://localhost:8000/api/v1/core/process-images \
             }'
         ```
 
-**Blacklist Management (`/blacklist`)**
+**Blacklist Management (`/face/blacklist`)**
 
 *   `POST /`
     *   **Purpose:** Add a new person to the blacklist database. **Requires image file upload(s).**
@@ -308,7 +309,7 @@ curl -X POST http://localhost:8000/api/v1/core/process-images \
     *   **Curl Example:**
         ```bash
         # Replace '/path/to/person_c_img1.jpg' and '/path/to/person_c_img2.png' with actual image paths
-        curl -X POST http://localhost:8000/api/v1/blacklist/ \\
+        curl -X POST http://localhost:8000/api/v1/face/blacklist/ \\
         -F "name=Person C" \\
         -F "reason=Suspicious activity" \\
         -F "images=@/path/to/person_c_img1.jpg;type=image/jpeg" \\
@@ -317,7 +318,7 @@ curl -X POST http://localhost:8000/api/v1/core/process-images \
 
         Example:
         ```bash
-        curl -X POST http://localhost:8000/api/v1/blacklist/ \
+        curl -X POST http://localhost:8000/api/v1/face/blacklist/ \
           -F "name=Stan" \
           -F "reason=Suspicious activity" \
           -F "images=@./data/1.png;type=image/png"
@@ -330,7 +331,7 @@ curl -X POST http://localhost:8000/api/v1/core/process-images \
     *   **Curl Example (add images to entry ID 1):**
         ```bash
         # Replace paths with actual image files
-        curl -X POST http://localhost:8000/api/v1/blacklist/1/images \\
+        curl -X POST http://localhost:8000/api/v1/face/blacklist/1/images \\
         -F "images=@/path/to/new_image1.jpg;type=image/jpeg" \\
         -F "images=@/path/to/new_image2.png;type=image/png"
         ```
@@ -340,14 +341,14 @@ curl -X POST http://localhost:8000/api/v1/core/process-images \
     *   **Response:** (`200 OK`) A list of `BlacklistRecord` objects.
     *   **Curl Example:**
         ```bash
-        curl http://localhost:8000/api/v1/blacklist/
+        curl http://localhost:8000/api/v1/face/blacklist/
         ```
 *   `GET /{id}/`
     *   **Purpose:** Retrieve a specific blacklist entry by its ID.
     *   **Response:** (`200 OK`) The `BlacklistRecord` or `404 Not Found`.
     *   **Curl Example (for ID 1):**
         ```bash
-        curl http://localhost:8000/api/v1/blacklist/1/
+        curl http://localhost:8000/api/v1/face/blacklist/1/
         ```
 *   `PUT /{id}/`
     *   **Purpose:** Update an existing blacklist entry (metadata only).
@@ -357,7 +358,7 @@ curl -X POST http://localhost:8000/api/v1/core/process-images \
         ```
     *   **Curl Example (for ID 1):**
         ```bash
-        curl -X PUT http://localhost:8000/api/v1/blacklist/1/ \\
+        curl -X PUT http://localhost:8000/api/v1/face/blacklist/1/ \\
         -H "Content-Type: application/json" \\
         -d '{"name": "Updated Person C Name", "reason": "Reason changed"}'
         ```
@@ -367,7 +368,7 @@ curl -X POST http://localhost:8000/api/v1/core/process-images \
     *   **Response:** (`200 OK`) The deleted `BlacklistRecord` or `404 Not Found`.
     *   **Curl Example (for ID 1):**
         ```bash
-        curl -X DELETE http://localhost:8000/api/v1/blacklist/1/
+        curl -X DELETE http://localhost:8000/api/v1/face/blacklist/1/
         ```
 
 ## Configuration

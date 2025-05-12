@@ -51,17 +51,19 @@ async def route_request(request: ProcessImagesRequest = Body(...)):
     log.info(f"Finished processing {len(request.images)} images.")
 
     return final_results
+
+
 # Add other endpoints like get by ID if needed 
-
-
-@router.get("/", response_model=PaginatedProcessedImagesResponse) # Define response model
+@router.get("/processed-images", response_model=PaginatedProcessedImagesResponse) # Define response model
 async def get_processed_images(
     limit: int = Query(20, ge=1, le=100, description="Number of records per page."),
-    offset: int = Query(0, ge=0, description="Number of records to skip for pagination.")
+    offset: int = Query(0, ge=0, description="Number of records to skip for pagination."),
+    # optional query param
+    app_type: str = Query(None, description="Type of application (face or weapons)")
 )->PaginatedProcessedImagesResponse:
     """Retrieves a paginated list of processed image records, ordered by newest first."""
-    db_records = await processed_image_crud.get_all_processed_images(limit=limit, offset=offset)
-    total_count = await processed_image_crud.get_processed_images_count()
+    db_records = await processed_image_crud.get_all_processed_images(limit=limit, offset=offset, app_type=app_type)
+    total_count = await processed_image_crud.get_processed_images_count(app_type=app_type)
     
     response_items = []
     for record in db_records:
@@ -69,14 +71,13 @@ async def get_processed_images(
             # Parse the stored JSON string back into the structure
             # We assume the stored JSON matches ImageProcessingResult structure
             result_data = json.loads(record.result_json)
-            
             # Create the response item, merging DB fields and JSON fields
             item = ProcessedImageRecord(
                 db_id=record.id,
                 saved_image_path=record.saved_image_path,
                 processing_timestamp=record.processing_timestamp,
                 has_blacklist_match=record.has_blacklist_match,
-                cropped_face_path=record.cropped_face_path,
+                cropped_face_path=record.cropped_path,
                 # Fields from the parsed JSON
                 image_path_or_identifier=result_data.get('image_path_or_identifier'),
                 faces=result_data.get('faces', []),

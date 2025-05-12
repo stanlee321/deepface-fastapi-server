@@ -255,10 +255,12 @@ async def process_single_face_image(img_input: str, request_params: ProcessImage
     # --- E. Log Result to Database --- 
     if saved_image_path: 
         await processed_image_crud.add_processed_image(
+            code=request_params.code,
+            app_type=request_params.app_type,
             input_identifier=img_input[:100] + ("..." if len(img_input) > 100 else ""), # Original identifier (truncated)
             saved_image_path=saved_image_path, # Path where copy was saved
             result=result_obj, # The full result object (includes cropped path now)
-            cropped_face_path=final_cropped_face_path # Pass path explicitly to DB function
+            cropped_path=final_cropped_face_path # Pass path explicitly to DB function
         )
     else:
         # This case is handled earlier, but included defensively
