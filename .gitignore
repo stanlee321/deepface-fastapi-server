@@ -20,3 +20,4 @@ __pycache__
 *.mp4
 *.sqlite3
 llm/my_vanna_db/*
+*.db

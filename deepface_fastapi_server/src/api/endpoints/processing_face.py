@@ -64,7 +64,7 @@ async def process_single_face_image(img_input: str, request_params: ProcessImage
                          face_area_obj = FacialArea.model_validate(facial_area_data)
                     except Exception as area_val_err:
                         log.warning(f"Could not validate facial_area for face {i}: {area_val_err}. Area data: {facial_area_data}")
-                        pass
+                        
                 else:
                     log.warning(f"Facial area data missing or invalid type for face {i}")
 
@@ -148,6 +148,8 @@ async def process_single_face_image(img_input: str, request_params: ProcessImage
             # Extract bounding box from the first match (assuming it represents the main matched face)
             if validated_matches: # Check if we have at least one validated match
                 first_match_data = matches[0] # Get raw dict again for coords
+                has_match_flag = True # Mark if any valid match exists
+
                 try:
                     # Attempt to create FacialArea from the first match's source coordinates
                     x_coord = first_match_data.get('source_x')
