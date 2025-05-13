@@ -67,10 +67,10 @@ class Settings(BaseSettings):
     CROPPED_FACE_PADDING_RATIO: float = os.getenv("CROPPED_FACE_PADDING_RATIO", 0.40)
     
     # --- Confidence Threshold ---
-    DETECTION_CONFIDENCE_THRESHOLD: float = os.getenv("DETECTION_CONFIDENCE_THRESHOLD", 0.80)
+    DETECTION_CONFIDENCE_THRESHOLD: float = os.getenv("DETECTION_CONFIDENCE_THRESHOLD", 0.90)
     
     # --- Blacklist Threshold ---
-    BLACKLIST_CONFIDENCE_THRESHOLD: float = os.getenv("BLACKLIST_CONFIDENCE_THRESHOLD", 0.80)
+    BLACKLIST_CONFIDENCE_THRESHOLD: float = os.getenv("BLACKLIST_CONFIDENCE_THRESHOLD", 0.90)
     
     # --- Weapons Detection Backend ---
     WEAPON_DETECTION_MODEL_PATH: str = os.getenv("WEAPON_DETECTION_MODEL_PATH", "")
