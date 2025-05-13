@@ -113,7 +113,9 @@ async def get_processed_images(
                 db_id=record.id,
                 saved_image_path=record.saved_image_path,
                 processing_timestamp=record.processing_timestamp,
-                has_blacklist_match=record.has_blacklist_match,
+                has_blacklist_match=result_data.has_blacklist_match,
+                app_type=record.app_type,
+                code=record.code,
                 cropped_face_path=record.cropped_path,
                 # Fields from the parsed JSON
                 image_path_or_identifier=result_data.get('image_path_or_identifier'),
