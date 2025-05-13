@@ -1,14 +1,15 @@
 import logging
+import cv2
 from typing import List, Dict, Any, Optional, Union
 import numpy as np # DeepFace might need numpy
-
-# Import the settings instance
+import os
+import base64
 from config import settings
 
 # Import CRUD modules for both backends
 from crud import face_crud # DeepFace backend
 from crud import aws_rekognition_crud # AWS Rekognition backend
-from crud.common import resolve_image_input # Reuse helper for input handling
+from crud.common import resolve_image_input, is_base64 # Reuse helper for input handling
 
 log = logging.getLogger(__name__)
 
@@ -80,19 +81,19 @@ async def find_blacklist_matches(
             
             if isinstance(resolved_input, str):
                 # If it's base64
-                if face_crud.is_base64(resolved_input):
+                if is_base64(resolved_input):
                     try:
                         header, encoded = resolved_input.split(',', 1)
-                        img_bytes = face_crud.base64.b64decode(encoded)
+                        img_bytes = base64.b64decode(encoded)
                     except ValueError:
-                         img_bytes = face_crud.base64.b64decode(resolved_input)
+                         img_bytes = base64.b64decode(resolved_input)
                 # If it's a file path
-                elif face_crud.os.path.exists(resolved_input):
+                elif os.path.exists(resolved_input):
                     with open(resolved_input, 'rb') as f:
                         img_bytes = f.read()
             elif isinstance(resolved_input, np.ndarray):
                  # Convert numpy array (BGR) to bytes (e.g., JPEG format)
-                 is_success, buffer = face_crud.cv2.imencode(".jpg", resolved_input)
+                 is_success, buffer = cv2.imencode(".jpg", resolved_input)
                  if is_success:
                     img_bytes = buffer.tobytes()
                  else:

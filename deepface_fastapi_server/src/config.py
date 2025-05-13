@@ -77,7 +77,7 @@ class Settings(BaseSettings):
     WEAPON_DETECTION_CONFIDENCE_THRESHOLD: float = os.getenv("WEAPON_DETECTION_CONFIDENCE_THRESHOLD", 0.10)
     
     # --- AWS Rekognition Configuration ---
-    AWS_THRESHOLD: float = os.getenv("AWS_THRESHOLD", 60.0)
+    AWS_THRESHOLD: float = os.getenv("AWS_THRESHOLD", 95.0)
 
 
     # --- Pydantic Settings Configuration ---
