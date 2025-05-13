@@ -10,7 +10,8 @@ from api.endpoints.processing_face import process_single_face_image
 from api.endpoints.detection_weapons import process_single_weapons_image
 from crud import processed_image_crud
 from models import PaginatedProcessedImagesResponse, ProcessedImageRecord
-
+from services.queue import get_mqtt_client
+from config import settings
 
 import logging
 log = logging.getLogger(__name__)
@@ -29,6 +30,11 @@ async def route_request(request: ProcessImagesRequest = Body(...)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No images provided.")
     final_results: List[Union[FaceImageProcessingResult, WeaponImageProcessingResult]] = []
     
+    
+    code =  request.code
+    app_type = request.app_type
+    image_url = final_results[0].saved_image_path
+    crop_url = ""
     if request.app_type == "face":
         # Using sequential processing for simplicity now.
         # Consider asyncio.gather or background tasks for production.
@@ -36,6 +42,8 @@ async def route_request(request: ProcessImagesRequest = Body(...)):
         for img_input in tqdm(request.images, desc="Processing Images"):
             result = await process_single_face_image(img_input, request)
             final_results.append(result)
+            crop_url = result.cropped_face_path
+
 
     elif request.app_type == "weapons":
         # Using sequential processing for simplicity now.
@@ -45,9 +53,38 @@ async def route_request(request: ProcessImagesRequest = Body(...)):
             results = await process_single_weapons_image(img_input, request)
             print(f"\n\nResults: {results}\n\n")
             final_results.append(results)
+            crop_url = results.cropped_face_path
+
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid app type.")
+    
+    mqtt_client = get_mqtt_client()
+    try:
+        mqtt_client.connect() # Ensure connection is established
 
+        # Example payload
+        test_payload = {
+            "code": code,
+            "app_type": app_type,
+            "image_url": image_url,
+            "crop_url": crop_url
+        }
+
+        # Use the process topic from settings
+        topic_to_publish = settings.MQTT_LLM_TOPIC
+
+        # Publish the message
+        success = mqtt_client.publish(topic_to_publish, test_payload)
+
+        if success:
+            print("Example: Message published successfully.")
+        else:
+            print("Example: Message publication failed.")
+
+    except Exception as e:
+        log.error(f"Error publishing message: {e}")
+
+    # send event to mqtt
     log.info(f"Finished processing {len(request.images)} images.")
 
     return final_results

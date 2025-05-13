@@ -79,7 +79,10 @@ class Settings(BaseSettings):
     # --- AWS Rekognition Configuration ---
     AWS_THRESHOLD: float = os.getenv("AWS_THRESHOLD", 60.0)
 
-
+    MQTT_LLM_TOPIC: str = os.getenv("MQTT_LLM_TOPIC", "llm/request")
+    MQTT_BROKER_HOST: int = os.getenv("MQTT_BROKER_PORT", 1883)
+    MQTT_BROKER_PORT: str = os.getenv("MQTT_BROKER_HOST", "localhost")
+    
     # --- Pydantic Settings Configuration ---
     class Config:
         # Optional: Specify .env file explicitly if needed
