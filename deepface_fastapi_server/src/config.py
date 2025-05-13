@@ -80,8 +80,8 @@ class Settings(BaseSettings):
     AWS_THRESHOLD: float = os.getenv("AWS_THRESHOLD", 95.0)
 
     MQTT_LLM_TOPIC: str = os.getenv("MQTT_LLM_TOPIC", "llm/request")
-    MQTT_BROKER_HOST: int = os.getenv("MQTT_BROKER_PORT", 1883)
-    MQTT_BROKER_PORT: str = os.getenv("MQTT_BROKER_HOST", "localhost")
+    MQTT_BROKER_PORT: int = os.getenv("MQTT_BROKER_PORT", 1883)
+    MQTT_BROKER_HOST: str = os.getenv("MQTT_BROKER_HOST", "localhost")
     
     # --- Pydantic Settings Configuration ---
     class Config:
