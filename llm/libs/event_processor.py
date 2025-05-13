@@ -17,7 +17,7 @@ async def process_llm_request_event_data(payload: dict):
     """
     # print(f"MQTT Background task started: Processing data {payload}")
     
-    infraction_code = payload.get("infraction_code")
+    infraction_code = payload.get("code")
     event_type = payload.get("event_type")
     app_type = payload.get("app_type") # Extract app_type
     image_url = payload.get("image_url")

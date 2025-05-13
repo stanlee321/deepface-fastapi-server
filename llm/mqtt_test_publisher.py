@@ -58,14 +58,10 @@ MQTT_PROCESS_TOPIC = settings.MQTT_PROCESS_TOPIC
 # Modify this payload as needed for your actual test case
 test_payload = {
     "request_id": f"test-{int(time.time())}",
-    "infraction_code": "code-123",
-    "event_type": "weapons",
-    "app_type": "lucam",
-    "image_url": "/Users/stanleysalvatierra/Desktop/2024/lucam/face/data/1.png",
-    "details": {
-        "param1": "value1",
-        "param2": 12345
-    },
+    "code": "1234f",
+    "app_type": "face",
+    "image_url": "/home/stanley/Desktop/2024/lucam/deepface-fastapi-server/deepface_fastapi_server/processed_images_output/0a99590b-007a-4e32-8255-fcbdf81a5f66.jpeg",
+    "crop_url": "/home/stanley/Desktop/2024/lucam/deepface-fastapi-server/deepface_fastapi_server/cropped_faces_output/0a99590b-007a-4e32-8255-fcbdf81a5f66_cropped.png",
     "timestamp": time.time()
 }
 
