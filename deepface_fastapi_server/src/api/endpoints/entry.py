@@ -33,7 +33,9 @@ async def route_request(request: ProcessImagesRequest = Body(...)):
     
     code =  request.code
     app_type = request.app_type
-    image_url = final_results[0].saved_image_path
+    image_url = final_results[0].saved_image_path if len(final_results) > 0 else ""
+    
+    print("request" , request)
     crop_url = ""
     if request.app_type == "face":
         # Using sequential processing for simplicity now.
@@ -59,33 +61,35 @@ async def route_request(request: ProcessImagesRequest = Body(...)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid app type.")
     
     mqtt_client = get_mqtt_client()
-    try:
-        mqtt_client.connect() # Ensure connection is established
+    
+    if image_url != "":
+        try:
+            mqtt_client.connect() # Ensure connection is established
 
-        # Example payload
-        test_payload = {
-            "code": code,
-            "app_type": app_type,
-            "image_url": image_url,
-            "crop_url": crop_url
-        }
+            # Example payload
+            test_payload = {
+                "code": code,
+                "app_type": app_type,
+                "image_url": image_url,
+                "crop_url": crop_url
+            }
 
-        # Use the process topic from settings
-        topic_to_publish = settings.MQTT_LLM_TOPIC
+            # Use the process topic from settings
+            topic_to_publish = settings.MQTT_LLM_TOPIC
 
-        # Publish the message
-        success = mqtt_client.publish(topic_to_publish, test_payload)
+            # Publish the message
+            success = mqtt_client.publish(topic_to_publish, test_payload)
 
-        if success:
-            print("Example: Message published successfully.")
-        else:
-            print("Example: Message publication failed.")
+            if success:
+                print("Example: Message published successfully.")
+            else:
+                print("Example: Message publication failed.")
 
-    except Exception as e:
-        log.error(f"Error publishing message: {e}")
+        except Exception as e:
+            log.error(f"Error publishing message: {e}")
 
-    # send event to mqtt
-    log.info(f"Finished processing {len(request.images)} images.")
+        # send event to mqtt
+        log.info(f"Finished processing {len(request.images)} images.")
 
     return final_results
 
