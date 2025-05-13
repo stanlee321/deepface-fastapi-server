@@ -129,6 +129,7 @@ async def get_processed_images(
             elif record.app_type == "weapons":
                 item = WeaponImageProcessingResult(
                     db_id=record.id,
+                    image_path_or_identifier=result_data.get('image_path_or_identifier'),
                     saved_image_path=record.saved_image_path,
                     processing_timestamp=record.processing_timestamp,
                     app_type=record.app_type,
