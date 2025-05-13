@@ -123,11 +123,6 @@ class ProcessedImageRecord(FaceImageProcessingResult):
     # Might need a custom validator or model_dump setting if base model fields
     # aren't automatically picked up correctly from the stored JSON.
 
-class PaginatedProcessedImagesResponse(BaseModel): 
-    total_items: int
-    items: List[ProcessedImageRecord]
-    limit: int
-    offset: int
 
 # --- Face Detection Endpoint Models ---
 
@@ -166,8 +161,17 @@ class WeaponImageProcessingResult(BaseModel):
     image_path_or_identifier: str # Use an identifier if input is not a path
     weapons: List[DetectWeaponsResponseItem]
     error: Optional[str] = None
+    code: Optional[str] = None
+    app_type: Optional[str] = None
     saved_image_path: Optional[str] = None # Path where image copy was saved
     cropped_weapon_path: Optional[str] = None # Path to the saved cropped weapon image
 
 # The response will be a list of these items
 # No need for a separate wrapper model if just returning List[DetectWeaponsResponseItem]
+
+
+class PaginatedProcessedImagesResponse(BaseModel): 
+    total_items: int
+    items: List[Union[FaceImageProcessingResult, WeaponImageProcessingResult]]
+    limit: int
+    offset: int

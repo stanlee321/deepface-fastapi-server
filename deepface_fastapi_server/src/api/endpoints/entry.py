@@ -109,19 +109,33 @@ async def get_processed_images(
             # We assume the stored JSON matches ImageProcessingResult structure
             result_data = json.loads(record.result_json)
             # Create the response item, merging DB fields and JSON fields
-            item = ProcessedImageRecord(
-                db_id=record.id,
-                saved_image_path=record.saved_image_path,
-                processing_timestamp=record.processing_timestamp,
-                has_blacklist_match=result_data["has_blacklist_match"],
-                app_type=record.app_type,
-                code=record.code,
-                cropped_face_path=record.cropped_path,
-                # Fields from the parsed JSON
-                image_path_or_identifier=result_data.get('image_path_or_identifier'),
-                faces=result_data.get('faces', []),
-                error=result_data.get('error')
-            )
+            if record.app_type == "face":
+                item = ProcessedImageRecord(
+                    db_id=record.id,
+                    saved_image_path=record.saved_image_path,
+                    processing_timestamp=record.processing_timestamp,
+                    has_blacklist_match=result_data["has_blacklist_match"],
+                    app_type=record.app_type,
+                    code=record.code,
+                    cropped_face_path=record.cropped_path,
+                    # Fields from the parsed JSON
+                    image_path_or_identifier=result_data.get('image_path_or_identifier'),
+                    faces=result_data.get('faces', []),
+                    error=result_data.get('error')
+                )
+            elif record.app_type == "weapons":
+                item = WeaponImageProcessingResult(
+                    db_id=record.id,
+                    saved_image_path=record.saved_image_path,
+                    processing_timestamp=record.processing_timestamp,
+                    app_type=record.app_type,
+                    code=record.code,
+                    cropped_weapon_path=record.cropped_path,
+                    weapons=result_data.get('weapons', []),
+                    error=result_data.get('error')
+                )
+            else:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid app type.")
             response_items.append(item)
         except json.JSONDecodeError:
             log.error(f"Failed to decode result_json for processed_image ID {record.id}")
