@@ -250,7 +250,7 @@ async def process_single_face_image(img_input: str, request_params: ProcessImage
         faces=image_faces_results, # Use the potentially single result
         error=error_msg,
         saved_image_path=saved_image_path, # Include path to saved image
-        has_blacklist_match=has_match_flag, # Set flag based on if matches were found
+        has_blacklist_match=True if len(matches) > 0 else False, # Set flag based on if matches were found
         cropped_face_path=final_cropped_face_path # Add the determined path
     )
     
