@@ -72,6 +72,8 @@ class FaceImageProcessingResult(BaseModel):
     error: Optional[str] = None
     # Add fields to match ProcessedImageRecord for consistency if needed
     db_id: Optional[int] = None # Optional as it's set after DB save
+    code: Optional[str] = None
+    app_type: Optional[str] = None
     saved_image_path: Optional[str] = None # Path where image copy was saved
     processing_timestamp: Optional[Any] = None # Keep Any or use datetime if validated
     has_blacklist_match: Optional[bool] = None # Flag indicating if any match occurred
