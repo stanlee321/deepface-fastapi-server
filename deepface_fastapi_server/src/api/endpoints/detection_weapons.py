@@ -17,7 +17,7 @@ from config import settings
 
 log = logging.getLogger(__name__)
 
-async def process_single_weapons_image(img_input: str, request_params: ProcessImagesRequest) -> List[DetectWeaponsResponseItem]:
+async def process_single_weapons_image(img_input: str, request_params: ProcessImagesRequest) -> WeaponImageProcessingResult:
     """
     Detects weapons in a single image using the configured DeepFace detector backend.
     Returns a list of detected weapons with coordinates and confidence.

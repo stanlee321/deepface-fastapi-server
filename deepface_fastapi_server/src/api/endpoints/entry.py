@@ -33,10 +33,10 @@ async def route_request(request: ProcessImagesRequest = Body(...)):
     
     code =  request.code
     app_type = request.app_type
-    image_url = final_results[0].saved_image_path if len(final_results) > 0 else ""
     
-    print("request" , request)
-    crop_url = ""
+    saved_image_path = ""
+    cropped_path = ""
+    
     if request.app_type == "face":
         # Using sequential processing for simplicity now.
         # Consider asyncio.gather or background tasks for production.
@@ -44,8 +44,8 @@ async def route_request(request: ProcessImagesRequest = Body(...)):
         for img_input in tqdm(request.images, desc="Processing Images"):
             result = await process_single_face_image(img_input, request)
             final_results.append(result)
-            crop_url = result.cropped_face_path
-
+            cropped_path = result.cropped_face_path
+            saved_image_path = result.saved_image_path
 
     elif request.app_type == "weapons":
         # Using sequential processing for simplicity now.
@@ -53,16 +53,15 @@ async def route_request(request: ProcessImagesRequest = Body(...)):
         log.info(f"Processing {len(request.images)} images for weapons detection sequentially...")
         for img_input in tqdm(request.images, desc="Processing Images"):
             results = await process_single_weapons_image(img_input, request)
-            print(f"\n\nResults: {results}\n\n")
             final_results.append(results)
-            crop_url = results.cropped_face_path
-
+            cropped_path = results.cropped_weapon_path
+            saved_image_path = results.saved_image_path
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid app type.")
     
     mqtt_client = get_mqtt_client()
     
-    if image_url != "":
+    if saved_image_path != "" and cropped_path != "":
         try:
             mqtt_client.connect() # Ensure connection is established
 
@@ -70,8 +69,8 @@ async def route_request(request: ProcessImagesRequest = Body(...)):
             test_payload = {
                 "code": code,
                 "app_type": app_type,
-                "image_url": image_url,
-                "crop_url": crop_url
+                "image_url": saved_image_path,
+                "crop_url": cropped_path
             }
 
             # Use the process topic from settings
