@@ -61,13 +61,3 @@ app.include_router(api_router, prefix="/api/v1") # Add a version prefix
 @app.get("/", tags=["Health Check"])
 async def root():
     return {"message": f"Welcome to the {settings.API_TITLE}"}
-
-# Add any other middleware or configurations as needed
-# Example CORS middleware:
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
-    allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
-) 

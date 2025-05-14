@@ -2,6 +2,7 @@ import json # Added for parsing MQTT payload
 import asyncio # Import asyncio
 
 from jobs.pipeline import pipeline
+from fastapi.middleware.cors import CORSMiddleware
 
 # APScheduler imports
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -134,6 +135,16 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan) # Use the lifespan manager
 # app.state.db = db.init_db() # Moved db init into lifespan
+
+# --- CORS Middleware ---
+# Allow requests from any origin
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 # MQTT Message Handler (Initial Event)
 @fast_mqtt.on_connect()
@@ -298,6 +309,3 @@ async def get_processed_descriptions_paginated_endpoint(
         offset=offset,
         data=data
     )
-
-
-
