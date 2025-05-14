@@ -189,7 +189,7 @@ This service provides a FastAPI application that integrates with MQTT for receiv
         ```
     *   Get page 3 with page size 20, filtered by code "ABC987":
         ```bash
-        curl -X GET "http://localhost:8000/processed_descriptions/?page=3&page_size=20&code=ABC987" \
+        curl -X GET "http://192.168.0.12:8004/processed_descriptions/?page=3&page_size=20&code=ABC987" \
              -H "Authorization: Bearer YOUR_JWT_TOKEN"
         ```
 
