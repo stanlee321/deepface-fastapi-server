@@ -80,7 +80,7 @@ async def process_single_weapons_image(img_input: str, request_params: ProcessIm
 
 
             # Only add if we have a valid weapon area
-            if weapon_area_obj and confidence_score and confidence_score > settings.WEAPON_DETECTION_CONFIDENCE_THRESHOLD:
+            if weapon_area_obj and confidence_score and confidence_score >= settings.WEAPON_DETECTION_CONFIDENCE_THRESHOLD:
                 
                 response_items.append(
                     DetectWeaponsResponseItem(
