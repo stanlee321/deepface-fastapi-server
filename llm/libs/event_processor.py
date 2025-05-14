@@ -25,7 +25,8 @@ async def process_llm_request_event_data(payload: dict):
     try:
         db_id = db.create_raw_description("", image_url, infraction_code, app_type, 'RECEIVED_MQTT')
     except Exception as e:
-        print(f"Error storing initial MQTT payload to DB for {infraction_code}: {e}")
+        # Print in red
+        print(f"\033[91mError storing initial MQTT payload to DB for {infraction_code}: {e}\033[0m")
         return
 
     # --- Describe Image ---
