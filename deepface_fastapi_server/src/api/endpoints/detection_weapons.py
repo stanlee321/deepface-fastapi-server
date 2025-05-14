@@ -56,6 +56,8 @@ async def process_single_weapons_image(img_input: str, request_params: ProcessIm
         return WeaponImageProcessingResult(
             image_path_or_identifier=img_input[:100] + ("..." if len(img_input) > 100 else ""),
             weapons=[],
+            saved_image_path = saved_image_path,
+            cropped_weapon_path = None,
             error="No weapons detected in the provided image."
         )
 
@@ -83,6 +85,7 @@ async def process_single_weapons_image(img_input: str, request_params: ProcessIm
                     DetectWeaponsResponseItem(
                         weapon_area=weapon_area_obj,
                         confidence=confidence_score
+                        
                     )
                 )
             else:

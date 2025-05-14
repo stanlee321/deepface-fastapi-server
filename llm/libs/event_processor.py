@@ -24,7 +24,6 @@ async def process_llm_request_event_data(payload: dict):
 
     try:
         db_id = db.create_raw_description("", image_url, infraction_code, app_type, 'RECEIVED_MQTT')
-        print(f"Initial MQTT data for {infraction_code} stored.")
     except Exception as e:
         print(f"Error storing initial MQTT payload to DB for {infraction_code}: {e}")
         return
@@ -33,7 +32,6 @@ async def process_llm_request_event_data(payload: dict):
     try:
         local_image_path = Path(image_url)
         if local_image_path and local_image_path.exists():
-            print(f"Encoding local image: {local_image_path}")
             data_uri_local = encode_image_to_data_uri(local_image_path)
             if data_uri_local:
                 description = describe_image(data_uri_local)
@@ -44,7 +42,6 @@ async def process_llm_request_event_data(payload: dict):
     # --- Update DB Status & Publish Processing Event ---
     try:
         db.update_raw_description_status_and_code(db_id, description, 'IMAGE_DESCRIEBER_SUCCESS', infraction_code)
-        print(f"Updated status to IMAGE_DESCRIEBER_SUCCESS for {infraction_code}")
     except Exception as e:
         print(f"Error updating status or publishing process event for {infraction_code}: {e}")
         db.update_raw_description_status_and_code(db_id, description, 'IMAGE_DESCRIEBER_FAILED', infraction_code)
