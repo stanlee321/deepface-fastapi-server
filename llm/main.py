@@ -34,6 +34,7 @@ from models import NLQueryRequest, NLQueryResponse
 
 # --- Import Pydantic for payload modeling --- 
 from pydantic import BaseModel
+from typing import List, Any, Optional # Added Optional
 
 # --- Define Pydantic model for smart_process payload --- 
 class SmartProcessPayload(BaseModel):
@@ -41,6 +42,38 @@ class SmartProcessPayload(BaseModel):
     request_id: str
     data: dict
     # Add other fields as necessary based on what process_smart_request expects
+
+# --- Define Pydantic models for paginated responses ---
+class RawDescriptionItem(BaseModel):
+    id: int
+    raw_description: str
+    image_url: str
+    code: str
+    app_type: str
+    status: str
+    created_at: str # Assuming datetime is returned as string
+    updated_at: str # Assuming datetime is returned as string
+
+class ProcessedDescriptionItem(BaseModel):
+    id: int
+    processed_description: str
+    code: str
+    app_type: str
+    status: str
+    created_at: str # Assuming datetime is returned as string
+    updated_at: str # Assuming datetime is returned as string
+
+class PaginatedRawDescriptionsResponse(BaseModel):
+    total_count: int
+    limit: int
+    offset: int
+    data: List[RawDescriptionItem]
+
+class PaginatedProcessedDescriptionsResponse(BaseModel):
+    total_count: int
+    limit: int
+    offset: int
+    data: List[ProcessedDescriptionItem]
 
 # MQTT Client Setup - Use settings attributes
 mqtt_config = MQTTConfig(
@@ -149,8 +182,6 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
     else:
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
-
-
 @app.post("/query_processed_descriptions_nl", response_model=NLQueryResponse)
 async def query_processed_descriptions_nl(
     request_body: NLQueryRequest, 
@@ -202,3 +233,71 @@ async def query_processed_descriptions_nl(
         if 'sql_query' not in locals():
             sql_query = "Error before SQL generation"
         return NLQueryResponse(question=question, sql_query=sql_query, results=None, error=error_message)
+
+@app.get("/raw_descriptions/", response_model=PaginatedRawDescriptionsResponse)
+async def get_raw_descriptions_paginated_endpoint(
+    page: int = 1, 
+    page_size: int = 10, 
+    code: Optional[str] = None
+):
+    """
+    Get paginated raw descriptions.
+    Optionally filter by code.
+    """
+    offset = (page - 1) * page_size
+    items, total_count = db.get_raw_descriptions_paginated(limit=page_size, offset=offset, code=code)
+    
+    # Convert tuple results to RawDescriptionItem
+    data = [
+        RawDescriptionItem(
+            id=item[0], 
+            raw_description=item[1], 
+            image_url=item[2], 
+            code=item[3], 
+            app_type=item[4], 
+            status=item[5],
+            created_at=str(item[6]), # Ensure datetime is stringified
+            updated_at=str(item[7])  # Ensure datetime is stringified
+        ) for item in items
+    ]
+    return PaginatedRawDescriptionsResponse(
+        total_count=total_count,
+        limit=page_size,
+        offset=offset,
+        data=data
+    )
+
+@app.get("/processed_descriptions/", response_model=PaginatedProcessedDescriptionsResponse)
+async def get_processed_descriptions_paginated_endpoint(
+    page: int = 1, 
+    page_size: int = 10, 
+    code: Optional[str] = None
+):
+    """
+    Get paginated processed descriptions.
+    Optionally filter by code.
+    """
+    offset = (page - 1) * page_size
+    items, total_count = db.get_processed_descriptions_paginated(limit=page_size, offset=offset, code=code)
+    
+    # Convert tuple results to ProcessedDescriptionItem
+    data = [
+        ProcessedDescriptionItem(
+            id=item[0], 
+            processed_description=item[1], 
+            code=item[2], 
+            app_type=item[3], 
+            status=item[4],
+            created_at=str(item[5]), # Ensure datetime is stringified
+            updated_at=str(item[6])  # Ensure datetime is stringified
+        ) for item in items
+    ]
+    return PaginatedProcessedDescriptionsResponse(
+        total_count=total_count,
+        limit=page_size,
+        offset=offset,
+        data=data
+    )
+
+
+

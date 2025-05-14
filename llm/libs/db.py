@@ -163,3 +163,61 @@ def get_processed_descriptions_by_code(code: str):
     finally:
         conn.close()
 
+def get_raw_descriptions_paginated(limit: int, offset: int, code: str | None = None):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        base_query = "SELECT * FROM raw_descriptions"
+        params = []
+        if code:
+            base_query += " WHERE code = ?"
+            params.append(code)
+        
+        base_query += " ORDER BY id LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+        
+        cursor.execute(base_query, tuple(params))
+        items = cursor.fetchall()
+        
+        # Get total count for pagination metadata
+        count_query = "SELECT COUNT(*) FROM raw_descriptions"
+        count_params = []
+        if code:
+            count_query += " WHERE code = ?"
+            count_params.append(code)
+        cursor.execute(count_query, tuple(count_params))
+        total_count = cursor.fetchone()[0]
+        
+        return items, total_count
+    finally:
+        conn.close()
+
+def get_processed_descriptions_paginated(limit: int, offset: int, code: str | None = None):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        base_query = "SELECT * FROM processed_descriptions"
+        params = []
+        if code:
+            base_query += " WHERE code = ?"
+            params.append(code)
+
+        base_query += " ORDER BY id LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+
+        cursor.execute(base_query, tuple(params))
+        items = cursor.fetchall()
+
+        # Get total count for pagination metadata
+        count_query = "SELECT COUNT(*) FROM processed_descriptions"
+        count_params = []
+        if code:
+            count_query += " WHERE code = ?"
+            count_params.append(code)
+        cursor.execute(count_query, tuple(count_params))
+        total_count = cursor.fetchone()[0]
+
+        return items, total_count
+    finally:
+        conn.close()
+
