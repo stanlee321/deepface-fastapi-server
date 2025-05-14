@@ -1,11 +1,17 @@
-from ultralytics import YOLO
-import supervision as sv
 import cv2
+from ultralytics import YOLO
+from rfdetr import RFDETRBase
 
+import supervision as sv
+from typing import Optional
 class CoreDetector:
-    def __init__(self, model_path="best_11n.pt"):
+    def __init__(self, model_path="best_11n.pt", rfdetr_model_path: Optional[str] = None):
         
         self.model = YOLO(model_path)
+        self.rfdetr_model = None
+        if rfdetr_model_path:
+            self.rfdetr_model = RFDETRBase(pretrain_weights=rfdetr_model_path)
+        
 
     def calculate_centroid(self, xyxy):
         """
@@ -42,7 +48,6 @@ class CoreDetector:
         annotated_frame = self.draw_centroid(annotated_frame, detections) 
         
         # Calculate centroids for all detections
-        centroids = [self.calculate_centroid(xyxy_det) for xyxy_det in detections.xyxy]
 
         
-        return annotated_frame, centroids, detections
+        return annotated_frame, detections
