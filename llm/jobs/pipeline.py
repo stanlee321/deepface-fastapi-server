@@ -16,17 +16,20 @@ def group_descriptions_by_code(descriptions):
         code = desc['code']
         raw_description = desc['raw_description']
         _id = desc['raw_id']
+        image_url = desc['image_url']
         # If code doesn't exist in dictionary, create new entry
         if code not in grouped_dict:
             grouped_dict[code] = {
                 'code': code,
                 'raw_descriptions': [],
-                'raw_ids': []
+                'raw_ids': [],
+                'image_urls': []
             }
         
         # Append the raw description to the corresponding code
         grouped_dict[code]['raw_descriptions'].append(raw_description)
         grouped_dict[code]['raw_ids'].append(_id)
+        grouped_dict[code]['image_urls'].append(image_url)
     # Convert dictionary to list of dictionaries
     result = list(grouped_dict.values())
     return result
@@ -41,7 +44,6 @@ async def pipeline():
     tasks = db.get_raw_descriptions_by_status('IMAGE_DESCRIEBER_SUCCESS')
     
     descriptions = []
-    
     for task in tasks:
         
         _id, raw_description, image_url, code, app_type, status, created_at, updated_at = task
@@ -49,7 +51,8 @@ async def pipeline():
         descriptions.append({
             'raw_description': raw_description,
             'code': code,
-            'raw_id': _id
+            'raw_id': _id,
+            'image_url': image_url
         })
     results = group_descriptions_by_code(descriptions)
 
@@ -60,11 +63,12 @@ async def pipeline():
         input_descriptions = result['raw_descriptions']
         code = result['code']
         _ids = result['raw_ids']
+        _last_image_url = result['image_urls'][-1]
         
         merged_description = describe_merged_descriptions(input_descriptions)
         
         # --- Update DB Status & Publish Processing Event ---
-        db.create_processed_description(merged_description, code, app_type, "MERGED_DESCRIPTION_SUCCESS")
+        db.create_processed_description(merged_description, code, app_type, "MERGED_DESCRIPTION_SUCCESS", _last_image_url)
         
         
         for _id in _ids:

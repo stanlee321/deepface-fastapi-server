@@ -26,6 +26,7 @@ def init_db():
             code TEXT NOT NULL,
             app_type TEXT NOT NULL,
             status TEXT NOT NULL,
+            image_url TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -50,14 +51,14 @@ def create_raw_description(raw_description, image_url, code, app_type, status):
     finally:
         conn.close()
         
-def create_processed_description(processed_description, code, app_type, status):
+def create_processed_description(processed_description, code, app_type, status, image_url):
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO processed_descriptions (processed_description, code, app_type, status)
-            VALUES (?, ?, ?, ?)
-        ''', (processed_description, code, app_type, status))
+            INSERT INTO processed_descriptions (processed_description, code, app_type, status, image_url )
+            VALUES (?, ?, ?, ?, ?)
+        ''', (processed_description, code, app_type, status, image_url))
         conn.commit()
 
         return cursor.lastrowid
