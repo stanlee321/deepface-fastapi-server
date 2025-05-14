@@ -93,6 +93,106 @@ This service provides a FastAPI application that integrates with MQTT for receiv
          }'
     ```
 
+### 3. Get Raw Descriptions (Paginated)
+
+*   **Method:** `GET`
+*   **Path:** `/raw_descriptions/`
+*   **Description:** Retrieves a paginated list of raw descriptions. Can be optionally filtered by a `code`.
+*   **Authentication:** Requires a valid JWT token in the `Authorization: Bearer <token>` header.
+*   **Query Parameters:**
+    *   `page` (optional, integer, default: `1`): The page number to retrieve.
+    *   `page_size` (optional, integer, default: `10`): The number of items per page.
+    *   `code` (optional, string): Filters descriptions by the exact code.
+*   **Response Body:** `application/json`
+    *   Returns a JSON object matching the `PaginatedRawDescriptionsResponse` model:
+        ```json
+        {
+          "total_count": 100,
+          "limit": 10,
+          "offset": 0,
+          "data": [
+            {
+              "id": 1,
+              "raw_description": "Initial raw description of an item.",
+              "image_url": "http://example.com/image.jpg",
+              "code": "ITEM001",
+              "app_type": "inventory",
+              "status": "pending",
+              "created_at": "2023-01-01T12:00:00Z",
+              "updated_at": "2023-01-01T12:00:00Z"
+            }
+            // ... more items
+          ]
+        }
+        ```
+*   **Curl Examples (Replace `YOUR_JWT_TOKEN`):**
+    *   Get first page (default size 10):
+        ```bash
+        # First, get a token from /login if you don't have one
+        # TOKEN=$(curl -s -X POST http://localhost:8000/login -H "Content-Type: application/x-www-form-urlencoded" -d "username=test&password=test" | jq -r .access_token)
+        # echo "Using token: $TOKEN"
+
+        curl -X GET "http://localhost:8000/raw_descriptions/" \
+             -H "Authorization: Bearer YOUR_JWT_TOKEN"
+        ```
+    *   Get page 2 with page size 5:
+        ```bash
+        curl -X GET "http://localhost:8000/raw_descriptions/?page=2&page_size=5" \
+             -H "Authorization: Bearer YOUR_JWT_TOKEN"
+        ```
+    *   Get first page, filtered by code "XYZ123":
+        ```bash
+        curl -X GET "http://localhost:8000/raw_descriptions/?code=XYZ123" \
+             -H "Authorization: Bearer YOUR_JWT_TOKEN"
+        ```
+
+### 4. Get Processed Descriptions (Paginated)
+
+*   **Method:** `GET`
+*   **Path:** `/processed_descriptions/`
+*   **Description:** Retrieves a paginated list of processed descriptions. Can be optionally filtered by a `code`.
+*   **Authentication:** Requires a valid JWT token in the `Authorization: Bearer <token>` header.
+*   **Query Parameters:**
+    *   `page` (optional, integer, default: `1`): The page number to retrieve.
+    *   `page_size` (optional, integer, default: `10`): The number of items per page.
+    *   `code` (optional, string): Filters descriptions by the exact code.
+*   **Response Body:** `application/json`
+    *   Returns a JSON object matching the `PaginatedProcessedDescriptionsResponse` model:
+        ```json
+        {
+          "total_count": 50,
+          "limit": 10,
+          "offset": 0,
+          "data": [
+            {
+              "id": 1,
+              "processed_description": "This is a processed description.",
+              "code": "PROC001",
+              "app_type": "reporting",
+              "status": "completed",
+              "created_at": "2023-01-02T14:00:00Z",
+              "updated_at": "2023-01-02T14:00:00Z"
+            }
+            // ... more items
+          ]
+        }
+        ```
+*   **Curl Examples (Replace `YOUR_JWT_TOKEN`):**
+    *   Get first page (default size 10):
+        ```bash
+        # First, get a token from /login if you don't have one
+        # TOKEN=$(curl -s -X POST http://localhost:8000/login -H "Content-Type: application/x-www-form-urlencoded" -d "username=test&password=test" | jq -r .access_token)
+        # echo "Using token: $TOKEN"
+        
+        curl -X GET "http://localhost:8000/processed_descriptions/" \
+             -H "Authorization: Bearer YOUR_JWT_TOKEN"
+        ```
+    *   Get page 3 with page size 20, filtered by code "ABC987":
+        ```bash
+        curl -X GET "http://localhost:8000/processed_descriptions/?page=3&page_size=20&code=ABC987" \
+             -H "Authorization: Bearer YOUR_JWT_TOKEN"
+        ```
+
 ## MQTT Integration
 
 *   The service connects to the configured MQTT broker on startup.
