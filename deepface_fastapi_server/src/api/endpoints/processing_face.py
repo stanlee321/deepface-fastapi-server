@@ -53,46 +53,44 @@ async def process_single_face_image(img_input: str, request_params: ProcessImage
         
         # Map the raw results to the response model
         for i, face_data in enumerate(detected_faces_data):
-            try:
-                facial_area_data = face_data.get('facial_area')
-                confidence_score = face_data.get('confidence')
+            print("facial_area..", face_data )
+            facial_area_data = face_data.get('facial_area')
+            confidence_score = face_data.get('confidence')
 
-                # Validate/create FacialArea model
-                face_area_obj = None
-                if isinstance(facial_area_data, dict):
-                    try:
-                         face_area_obj = FacialArea.model_validate(facial_area_data)
-                    except Exception as area_val_err:
-                        log.warning(f"Could not validate facial_area for face {i}: {area_val_err}. Area data: {facial_area_data}")
-                        
-                else:
-                    log.warning(f"Facial area data missing or invalid type for face {i}")
+            # Validate/create FacialArea model
+            face_area_obj = None
+            if isinstance(facial_area_data, dict):
+                try:
+                    face_area_obj = FacialArea.model_validate(facial_area_data)
+                except Exception as area_val_err:
+                    log.warning(f"Could not validate facial_area for face {i}: {area_val_err}. Area data: {facial_area_data}")
+                    
+            else:
+                log.warning(f"Facial area data missing or invalid type for face {i}")
 
-                log.info(f"Face {i} confidence score: {confidence_score}, result: {face_area_obj}")
-                # Only add if we have a valid facial area
-                if face_area_obj and confidence_score and confidence_score > settings.DETECTION_CONFIDENCE_THRESHOLD:
-                    # image_faces_results.append(
-                    #     DetectedFaceResult(
-                    #         face_index=i,
-                    #         facial_area=face_area_obj,
-                    #         confidence=confidence_score
-                    #     )
-                    # )
-                    break
-                else:
-                    log.warning(f"Skipping face {i} in response due to missing/invalid facial_area or confidence score.")
-                    result_obj = FaceImageProcessingResult(
-                        image_path_or_identifier=img_input[:100] + ("..." if len(img_input) > 100 else ""),
-                        faces=[], # Empty faces list
-                        error=error_msg,
-                                saved_image_path=None, # Indicate save failed
-                                has_blacklist_match=False # Default
-                            )
-                    return result_obj
+            log.info(f"Face {i} confidence score: {confidence_score}, result: {face_area_obj}")
+            # Only add if we have a valid facial area
+            if face_area_obj and confidence_score and confidence_score > settings.DETECTION_CONFIDENCE_THRESHOLD:
+                # image_faces_results.append(
+                #     DetectedFaceResult(
+                #         face_index=i,
+                #         facial_area=face_area_obj,
+                #         confidence=confidence_score
+                #     )
+                # )
+                break
+            else:
+                log.warning(f"Skipping face {i} in response due to missing/invalid facial_area or confidence score.")
+                result_obj = FaceImageProcessingResult(
+                    image_path_or_identifier=img_input[:100] + ("..." if len(img_input) > 100 else ""),
+                    faces=[], # Empty faces list
+                    error=error_msg,
+                            saved_image_path=None, # Indicate save failed
+                            has_blacklist_match=False # Default
+                        )
+                return result_obj
 
-            except Exception as item_err:
-                log.error(f"Error processing detected face data item {i}: {item_err}. Data: {face_data}")
-                # Optionally skip this item or raise a more specific error?
+
                 
         # --- A. Save a copy of the incoming image --- 
         log.info(f"Saving image: {img_input[:10]}...")

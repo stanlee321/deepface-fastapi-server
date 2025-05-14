@@ -39,8 +39,6 @@ async def process_single_weapons_image(img_input: str, request_params: ProcessIm
             # Skipping DB logging if save failed
             return result_obj
 
-        # --- B. Process using the Service Layer --- 
-        logging.info(f"Finding blacklist matches via service layer for image: {img_input[:50]}...")
     
     except Exception as e:
         log.error(f"Error processing weapons detection: {e}")
@@ -77,7 +75,6 @@ async def process_single_weapons_image(img_input: str, request_params: ProcessIm
                 weapon_area_obj = WeaponArea.model_validate(weapon_area_data)
             else:
                 log.warning(f"Weapon area data missing or invalid type for weapon {i}")
-
 
             # Only add if we have a valid weapon area
             if weapon_area_obj and confidence_score and confidence_score >= settings.WEAPON_DETECTION_CONFIDENCE_THRESHOLD:

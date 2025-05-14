@@ -31,6 +31,7 @@ def extract_weapons_from_image(
     # Note: extract_weapons returns RGB float images by default in the 'weapon' key
     weapons = weapon_detector.process_frame(processed_input, 
                                             confidence_threshold=settings.WEAPON_DETECTION_CONFIDENCE_THRESHOLD)
+    print("WEAPONS DETECTED...weapons", weapons)
     # Ensure result is always a list, even if empty or None
     return weapons if weapons else []
 
