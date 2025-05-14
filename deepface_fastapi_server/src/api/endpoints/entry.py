@@ -12,6 +12,7 @@ from crud import processed_image_crud
 from models import PaginatedProcessedImagesResponse, ProcessedImageRecord
 from services.queue import get_mqtt_client
 from config import settings
+from crud import common
 
 import logging
 log = logging.getLogger(__name__)
@@ -34,8 +35,8 @@ async def route_request(request: ProcessImagesRequest = Body(...)):
     code =  request.code
     app_type = request.app_type
     
-    saved_image_path = ""
-    cropped_path = ""
+    images_list = []
+    cropped_path = None
     
     if request.app_type == "face":
         # Using sequential processing for simplicity now.
@@ -43,9 +44,12 @@ async def route_request(request: ProcessImagesRequest = Body(...)):
         log.info(f"Processing {len(request.images)} images for face detection sequentially...")
         for img_input in tqdm(request.images, desc="Processing Images"):
             result = await process_single_face_image(img_input, request)
+            _saved_image_path = await common.save_incoming_image(img_input)
+            
+            
+            images_list.append(_saved_image_path)
             final_results.append(result)
             cropped_path = result.cropped_face_path
-            saved_image_path = result.saved_image_path
 
     elif request.app_type == "weapons":
         # Using sequential processing for simplicity now.
@@ -53,25 +57,34 @@ async def route_request(request: ProcessImagesRequest = Body(...)):
         log.info(f"Processing {len(request.images)} images for weapons detection sequentially...")
         for img_input in tqdm(request.images, desc="Processing Images"):
             results = await process_single_weapons_image(img_input, request)
+            _saved_image_path = await common.save_incoming_image(img_input)
+
+            images_list.append(_saved_image_path)
             final_results.append(results)
+            
             cropped_path = results.cropped_weapon_path
-            saved_image_path = results.saved_image_path
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid app type.")
     
     mqtt_client = get_mqtt_client()
     
-    if saved_image_path != "" and cropped_path != "":
+    counter = 0
+    print(" i have this images to send ..", len(images_list))
+    for _image in images_list:
         try:
+            if counter == 3:
+                break
             mqtt_client.connect() # Ensure connection is established
 
             # Example payload
             test_payload = {
                 "code": code,
                 "app_type": app_type,
-                "image_url": saved_image_path,
+                "image_url": _image,
                 "crop_url": cropped_path
             }
+            
+            print("Publishing this message... ", test_payload)
 
             # Use the process topic from settings
             topic_to_publish = settings.MQTT_LLM_TOPIC
@@ -80,6 +93,7 @@ async def route_request(request: ProcessImagesRequest = Body(...)):
             success = mqtt_client.publish(topic_to_publish, test_payload)
 
             if success:
+                counter += 1 
                 print("Example: Message published successfully.")
             else:
                 print("Example: Message publication failed.")

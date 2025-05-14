@@ -7,7 +7,7 @@ GLOBAL_RESOLUTION = (640, 640)
 THRESHOLD = 0.3
 DEVICE = get_gpu_device()
 # VIDEO_SOURCE = "./video_prueba_1.mp4"
-VIDEO_SOURCE = "prueba1.mp4"
+VIDEO_SOURCE = 0
 
 # Modelo de detección
 # best_11n.pt es el modelo de detección  mas pequeño (n de nano)

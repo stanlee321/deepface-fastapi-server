@@ -1,16 +1,121 @@
 import cv2
 import torch
 from ultralytics import YOLO
+from rfdetr import RFDETRBase
+
 import supervision as sv
-from typing import List, Dict, Any
+from typing import List, Dict, Any,Optional
 
 from config import settings
 
+
+
+def parse_weapon_detections(detections, image_identifier, dt_type: str):
+    
+    if dt_type == "yolo":
+        results = {"image_path_or_identifier": image_identifier, "objects": [], "error": None}
+        for i, (xyxy, conf, class_id, class_name) in enumerate(zip(detections.xyxy, detections.confidence, detections.class_id, detections.data.get("class_name", []))):
+            x1, y1, x2, y2 = xyxy
+        w = x2 - x1
+        h = y2 - y1
+        results["objects"].append({
+            "object_index": i,
+                "bounding_box": {"x": int(x1), "y": int(y1), "w": int(w), "h": int(h)},
+                "confidence": float(conf),
+                "class_id": int(class_id) if class_id is not None else None,
+                "class_name": class_name if class_name else None
+            })
+    elif dt_type == "rfdetr":
+        results = []
+
+        if not (hasattr(detections, 'xyxy') and \
+                hasattr(detections, 'confidence') and \
+                hasattr(detections, 'class_id')):
+            error_message = (f"RFDETR detections are not in the expected 'Detections' object format "
+                             f"(missing one of: xyxy, confidence, class_id). Got type: {type(detections)}. No objects processed.")
+            results["error"] = error_message
+            print(f"Error: {error_message} - Detections content: {str(detections)[:200]}")
+            return results
+
+        if not hasattr(detections.xyxy, '__len__') or len(detections.xyxy) == 0:
+            return results
+
+        num_detections = len(detections.xyxy)
+        
+        class_names_list = [None] * num_detections
+        if hasattr(detections, 'data') and isinstance(detections.data, dict) and "class_name" in detections.data:
+            retrieved_class_names = detections.data["class_name"]
+            valid_class_names_found = False
+            if isinstance(retrieved_class_names, list) and len(retrieved_class_names) == num_detections:
+                class_names_list = retrieved_class_names
+                valid_class_names_found = True
+            elif hasattr(retrieved_class_names, 'shape') and hasattr(retrieved_class_names, 'tolist') and \
+                 len(retrieved_class_names.shape) == 1 and retrieved_class_names.shape[0] == num_detections:
+                class_names_list = retrieved_class_names.tolist() # Convert NumPy array to list
+                valid_class_names_found = True
+            
+            if not valid_class_names_found:
+                actual_type_str = str(type(retrieved_class_names))
+                actual_len_shape_str = 'N/A'
+                if hasattr(retrieved_class_names, 'shape'): # Primarily for NumPy arrays
+                    actual_len_shape_str = f"shape {retrieved_class_names.shape}"
+                elif hasattr(retrieved_class_names, '__len__'): # For lists and other sequences
+                    try: actual_len_shape_str = f"length {len(retrieved_class_names)}"
+                    except TypeError: pass
+
+                print(f"Warning: For RFDETR, 'detections.data[\"class_name\"]' was present but not a compatible list or NumPy array of length {num_detections}. "
+                      f"Actual type: {actual_type_str}, Actual_len/shape: {actual_len_shape_str}. Using None for class names.")
+        
+        for i, (xyxy_val, conf_val, class_id_val, c_name) in enumerate(zip(detections.xyxy, detections.confidence, detections.class_id, class_names_list)):
+            try:
+                valid_xyxy = False
+                if isinstance(xyxy_val, (list, tuple)) and len(xyxy_val) == 4:
+                    valid_xyxy = True
+                elif hasattr(xyxy_val, 'shape') and hasattr(xyxy_val, 'tolist'): # Check for NumPy-like array
+                    if len(xyxy_val.shape) == 1 and xyxy_val.shape[0] == 4:
+                        valid_xyxy = True
+                
+                if not valid_xyxy:
+                    type_str = str(type(xyxy_val))
+                    shape_str = str(xyxy_val.shape) if hasattr(xyxy_val, 'shape') else "N/A"
+                    val_str = str(xyxy_val)[:100]
+                    print(f"Warning: RFDETR detection item {i} has invalid 'xyxy' format. Expected list/tuple of 4, or NumPy-like array of shape (4,). "
+                          f"Got Type: {type_str}, Shape: {shape_str}, Value: {val_str}. Skipping.")
+                    continue
+                
+                x1_f, y1_f, x2_f, y2_f = map(float, xyxy_val)
+                w_f = x2_f - x1_f
+                h_f = y2_f - y1_f
+                
+                data = {
+                    "image_path_or_identifier": image_identifier, 
+                    "objects": [], 
+                    "error": None
+                }
+                
+                data["objects"].append({
+                    "object_index": i,
+                    "weapon_area": {"x": int(x1_f), "y": int(y1_f), "w": int(w_f), "h": int(h_f)},
+                    "confidence": float(conf_val),
+                    "class_id": int(class_id_val) if class_id_val is not None else None,
+                    "class_name": c_name if c_name else None
+                })
+
+                results.append(data)
+                
+            except (TypeError, ValueError) as e:
+                print(f"Warning: Error processing RFDETR detection item {i} (xyxy: {str(xyxy_val)[:50]}, conf: {conf_val}, id: {class_id_val}). Error: {e}. Skipping.")
+                continue
+    return results
+
+
 class CoreDetector:
-    def __init__(self, model_path="best_11n.pt"):
+    def __init__(self, model_path="best_11n.pt", rfdetr_model_path: Optional[str] = None):
         
         self.model = YOLO(model_path)
-        
+        self.rfdetr_model = None
+        if rfdetr_model_path:
+            self.rfdetr_model = RFDETRBase(pretrain_weights=rfdetr_model_path)
         self.device = self.get_gpu_device()
         
     @staticmethod
@@ -104,7 +209,7 @@ class CoreDetector:
         # Handle case where no detections are found (or left after filtering)
         if len(detections) == 0:
             return []
-        return self.parse_weapon_detections(detections, frame)
+        return parse_weapon_detections(detections, frame, dt_type="rfdetr")
     
     
 weapon_detector = None
@@ -139,7 +244,10 @@ def get_weapon_detector()->CoreDetector:
     global weapon_detector
     if weapon_detector is None:
         weapon_detector = CoreDetector(
-            model_path=settings.WEAPON_DETECTION_MODEL_PATH
+            model_path="/home/stanley/Desktop/2024/lucam/deepface-fastapi-server/weapons/weights_weapons_v1.pt",
+            rfdetr_model_path=settings.WEAPON_DETECTION_MODEL_PATH
+            # model_path=settings.WEAPON_DETECTION_MODEL_PATH
+            
         )
     return weapon_detector
     
