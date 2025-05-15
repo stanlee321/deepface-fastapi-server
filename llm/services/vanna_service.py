@@ -38,6 +38,26 @@ def get_processed_descriptions_ddl(db_path: str = 'llm_descriptions.db') -> str 
         if conn:
             conn.close()
 
+def get_processed_descriptions_ddl_2(db_path: str = 'llm_descriptions.db') -> str | None:
+    """Fetches the DDL for the processed_descriptions table."""
+    conn = None
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='raw_descriptions';")
+        row = cursor.fetchone()
+        if row:
+            return row[0]
+        else:
+            print("Table 'raw_descriptions' not found.")
+            return None
+    except Exception as e:
+        print(f"Error fetching DDL: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
+
 def initialize_vanna():
     """Initializes and trains the Vanna instance."""
     global _vanna_instance
@@ -57,11 +77,12 @@ def initialize_vanna():
     vn.connect_to_sqlite('llm_descriptions.db')
     
     print("Fetching DDL for 'processed_descriptions' table...")
-    ddl = get_processed_descriptions_ddl()
-    
-    if ddl:
-        print(f"Training Vanna with DDL: {ddl}")
-        vn.train(ddl=ddl)
+    ddl_1 = get_processed_descriptions_ddl()
+    ddl_2 = get_processed_descriptions_ddl_2()
+    if ddl_1 and ddl_2:
+        print(f"Training Vanna with DDL: {ddl_1}")
+        vn.train(ddl=ddl_1)
+        vn.train(ddl=ddl_2)
     else:
         print("Could not train Vanna with DDL as it was not found.")
 
