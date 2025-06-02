@@ -25,6 +25,13 @@ class WeaponArea(BaseModel):
     w: Optional[Union[int, float]] = None
     h: Optional[Union[int, float]] = None
 
+class PlateArea(BaseModel):
+    # Allow float coordinates for plate detection API
+    x: Optional[Union[int, float]] = None
+    y: Optional[Union[int, float]] = None
+    w: Optional[Union[int, float]] = None
+    h: Optional[Union[int, float]] = None
+
 class BlacklistMatch(BaseModel):
     # Fields directly from DeepFace.find results or AWS mapped results
     identity: str # Path (DeepFace) or aws_rekognition_external_id:id (AWS)
@@ -91,6 +98,7 @@ class ProcessImagesRequest(BaseModel):
     model_name: Optional[str] = None
     distance_metric: Optional[str] = None
     threshold: Optional[float] = None
+    regions: Optional[List[str]] = Field(None, description="List of region codes for plate recognition (e.g., ['mx', 'us-ca'])")
 
 # --- Blacklist CRUD Models ---
 class BlacklistBase(BaseModel):
@@ -166,12 +174,27 @@ class WeaponImageProcessingResult(BaseModel):
     saved_image_path: Optional[str] = None # Path where image copy was saved
     cropped_weapon_path: Optional[str] = None # Path to the saved cropped weapon image
 
+class DetectPlatesResponseItem(BaseModel):
+    # Corresponds to one detected plate from AlpAPI
+    plate_area: Optional[PlateArea] = None # Plate coordinates
+    confidence: Optional[float] = None # Confidence score from the detector
+    plate_text: Optional[str] = None # The recognized plate text/number
+
+class PlateImageProcessingResult(BaseModel):
+    image_path_or_identifier: str # Use an identifier if input is not a path
+    plates: List[DetectPlatesResponseItem]
+    error: Optional[str] = None
+    code: Optional[str] = None
+    app_type: Optional[str] = None
+    saved_image_path: Optional[str] = None # Path where image copy was saved
+    cropped_plate_path: Optional[str] = None # Path to the saved cropped plate image
+
 # The response will be a list of these items
 # No need for a separate wrapper model if just returning List[DetectWeaponsResponseItem]
 
 
 class PaginatedProcessedImagesResponse(BaseModel): 
     total_items: int
-    items: List[Union[FaceImageProcessingResult, WeaponImageProcessingResult]]
+    items: List[Union[FaceImageProcessingResult, WeaponImageProcessingResult, PlateImageProcessingResult]]
     limit: int
     offset: int

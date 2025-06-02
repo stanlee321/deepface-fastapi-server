@@ -1,13 +1,13 @@
-
 import json
 
 from fastapi import APIRouter, Body, HTTPException, status, Query
 from tqdm import tqdm
 from typing import List, Union
 
-from models import ProcessImagesRequest, FaceImageProcessingResult, WeaponImageProcessingResult
+from models import ProcessImagesRequest, FaceImageProcessingResult, WeaponImageProcessingResult, PlateImageProcessingResult
 from api.endpoints.processing_face import process_single_face_image
 from api.endpoints.detection_weapons import process_single_weapons_image
+from api.endpoints.detection_plates import process_single_plate_image
 from crud import processed_image_crud
 from models import PaginatedProcessedImagesResponse, ProcessedImageRecord
 from services.queue import get_mqtt_client
@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/process-images", response_model=List[Union[FaceImageProcessingResult, WeaponImageProcessingResult]])
+@router.post("/process-images", response_model=List[Union[FaceImageProcessingResult, WeaponImageProcessingResult, PlateImageProcessingResult]])
 async def route_request(request: ProcessImagesRequest = Body(...)):
     """
     Processes a list of images (paths, URLs, or base64 strings) using the configured backend.
@@ -29,7 +29,7 @@ async def route_request(request: ProcessImagesRequest = Body(...)):
     
     if not request.images:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No images provided.")
-    final_results: List[Union[FaceImageProcessingResult, WeaponImageProcessingResult]] = []
+    final_results: List[Union[FaceImageProcessingResult, WeaponImageProcessingResult, PlateImageProcessingResult]] = []
     
     
     code =  request.code
@@ -50,6 +50,18 @@ async def route_request(request: ProcessImagesRequest = Body(...)):
             images_list.append(_saved_image_path)
             final_results.append(result)
             cropped_path = result.cropped_face_path
+            
+    elif request.app_type == "plate":
+        # Using sequential processing for simplicity now.
+        # Consider asyncio.gather or background tasks for production.
+        log.info(f"Processing {len(request.images)} images for plate detection sequentially...")
+        for img_input in tqdm(request.images, desc="Processing Images"):
+            result = await process_single_plate_image(img_input, request)
+            _saved_image_path = await common.save_incoming_image(img_input)
+            
+            images_list.append(_saved_image_path)
+            final_results.append(result)
+            cropped_path = result.cropped_plate_path
 
     elif request.app_type == "weapons":
         # Using sequential processing for simplicity now.
@@ -150,6 +162,18 @@ async def get_processed_images(
                     code=record.code,
                     cropped_weapon_path=record.cropped_path,
                     weapons=result_data.get('weapons', []),
+                    error=result_data.get('error')
+                )
+            elif record.app_type == "plate":
+                item = PlateImageProcessingResult(
+                    db_id=record.id,
+                    image_path_or_identifier=result_data.get('image_path_or_identifier'),
+                    saved_image_path=record.saved_image_path,
+                    processing_timestamp=record.processing_timestamp,
+                    app_type=record.app_type,
+                    code=record.code,
+                    cropped_plate_path=record.cropped_path,
+                    plates=result_data.get('plates', []),
                     error=result_data.get('error')
                 )
             else:

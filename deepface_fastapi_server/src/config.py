@@ -76,6 +76,12 @@ class Settings(BaseSettings):
     WEAPON_DETECTION_MODEL_PATH: str = os.getenv("WEAPON_DETECTION_MODEL_PATH", "")
     WEAPON_DETECTION_CONFIDENCE_THRESHOLD: float = os.getenv("WEAPON_DETECTION_CONFIDENCE_THRESHOLD", 0.15)
     
+    # --- Plate Recognition Configuration (AlpAPI) ---
+    ALP_API_KEY: str = os.getenv("ALP_API_KEY", "21db5b37f73be40ca0f46d1dfce54e75995328be")
+    ALP_BASE_URL: str = os.getenv("ALP_BASE_URL", "https://api.platerecognizer.com")
+    PLATE_DETECTION_CONFIDENCE_THRESHOLD: float = float(os.getenv("PLATE_DETECTION_CONFIDENCE_THRESHOLD", "0.70"))
+    CROPPED_PLATES_OUTPUT_DIR: str = os.getenv("CROPPED_PLATES_OUTPUT_DIR", "")
+    
     # --- AWS Rekognition Configuration ---
     AWS_THRESHOLD: float = os.getenv("AWS_THRESHOLD", 95.0)
 

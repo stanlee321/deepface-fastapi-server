@@ -2,7 +2,8 @@ from fastapi import APIRouter
 from api.endpoints import ( 
                            blacklist, 
                            detection,
-                           entry)
+                           entry,
+                           plates)
 
 api_router = APIRouter()
 
