@@ -2,6 +2,7 @@
 Plate Detection Module using AlpAPI Integration
 
 This module integrates with the Plate Recognizer API (AlpAPI) to detect and recognize license plates in images.
+After successful detection, it can optionally send the plate information to a parking management API.
 
 Setup Requirements:
 1. Add the following environment variables to your .env file:
@@ -10,13 +11,25 @@ Setup Requirements:
    - PLATE_DETECTION_CONFIDENCE_THRESHOLD: Minimum confidence threshold (default: 0.70)
    - CROPPED_PLATES_OUTPUT_DIR: Directory to save cropped plate images
 
-2. The API supports region specification for better accuracy:
+2. Parking API Integration (optional):
+   - SEND_TO_PARKING_API: Enable/disable parking API calls (default: true)
+   - PARKING_API_URL: Parking API endpoint (default: https://backend-vialika.vercel.app/api/v1/parkings)
+   - PARKING_SOURCE: Source identifier (default: "camera")
+   - PARKING_LATITUDE: Location latitude (default: -17.393398)
+   - PARKING_LONGITUDE: Location longitude (default: -66.248857)
+
+3. The API supports region specification for better accuracy:
    - Include 'regions' parameter in your request with region codes like ["mx", "us-ca"]
 
-3. Response includes:
+4. Response includes:
    - Detected plate coordinates (x, y, width, height)
    - Confidence score
    - Recognized plate text/number
+
+5. Workflow:
+   - Detect plate using AlpAPI
+   - If successful and enabled, send plate info to parking API
+   - Return processing results
 
 Example usage:
 POST /process-images
@@ -94,6 +107,57 @@ class AlpAPI:
             return None
 
 
+class ParkingAPI:
+    def __init__(self, api_url: str, source: str, latitude: float, longitude: float):
+        self.api_url = api_url
+        self.source = source
+        self.latitude = latitude
+        self.longitude = longitude
+    
+    def send_plate_to_parking(self, license_plate: str) -> bool:
+        """
+        Send detected license plate information to the parking API.
+        
+        Args:
+            license_plate: The detected license plate text
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            payload = {
+                "licensePlate": license_plate,
+                "source": self.source,
+                "location": {
+                    "latitude": self.latitude,
+                    "longitude": self.longitude
+                }
+            }
+            
+            log.info(f"Sending plate to parking API: {payload}")
+            
+            response = requests.post(
+                self.api_url,
+                json=payload,
+                headers={'Content-Type': 'application/json'},
+                timeout=10  # 10 second timeout
+            )
+            
+            response.raise_for_status()
+            log.info(f"Successfully sent plate {license_plate} to parking API. Response: {response.status_code}")
+            return True
+            
+        except requests.exceptions.Timeout:
+            log.error(f"Timeout sending plate {license_plate} to parking API")
+            return False
+        except requests.exceptions.RequestException as e:
+            log.error(f"Error sending plate {license_plate} to parking API: {str(e)}")
+            return False
+        except Exception as e:
+            log.error(f"Unexpected error sending plate {license_plate} to parking API: {str(e)}")
+            return False
+
+
 async def process_single_plate_image(img_input: str, request_params: ProcessImagesRequest) -> PlateImageProcessingResult:
     """
     Detects plates in a single image using the AlpAPI plate recognition service.
@@ -111,7 +175,8 @@ async def process_single_plate_image(img_input: str, request_params: ProcessImag
                  plates=[], # Empty plates list
                  error=error_msg,
                  saved_image_path=None,
-                 cropped_plate_path=None
+                 cropped_plate_path=None,
+                 parking_api_sent=None
             )
             # Skipping DB logging if save failed
             return result_obj
@@ -123,7 +188,8 @@ async def process_single_plate_image(img_input: str, request_params: ProcessImag
             plates=[],
             error=f"Error processing image: {str(e)}",
             saved_image_path=None,
-            cropped_plate_path=None
+            cropped_plate_path=None,
+            parking_api_sent=None
         )
         return result_obj
       
@@ -133,6 +199,16 @@ async def process_single_plate_image(img_input: str, request_params: ProcessImag
         base_url=settings.ALP_BASE_URL  # Add this to your settings
     )
     
+    # Initialize ParkingAPI with configuration
+    parking_api = None
+    if settings.SEND_TO_PARKING_API:
+        parking_api = ParkingAPI(
+            api_url=settings.PARKING_API_URL,
+            source=settings.PARKING_SOURCE,
+            latitude=settings.PARKING_LATITUDE,
+            longitude=settings.PARKING_LONGITUDE
+        )
+
     # Read the saved image file as bytes
     try:
         with open(saved_image_path, 'rb') as image_file:
@@ -144,6 +220,7 @@ async def process_single_plate_image(img_input: str, request_params: ProcessImag
             plates=[],
             saved_image_path=saved_image_path,
             cropped_plate_path=None,
+            parking_api_sent=None,
             error=f"Error reading image file: {str(e)}"
         )
 
@@ -162,6 +239,7 @@ async def process_single_plate_image(img_input: str, request_params: ProcessImag
             plates=[],
             saved_image_path=saved_image_path,
             cropped_plate_path=None,
+            parking_api_sent=None,
             error="No plates detected in the provided image."
         )
 
@@ -198,6 +276,22 @@ async def process_single_plate_image(img_input: str, request_params: ProcessImag
 
     log.info(f"Successfully detected {len(response_items)} plates.")
         
+    # --- Send Plate to Parking API if Enabled and Successful Detection ---
+    parking_api_sent = False
+    if parking_api and response_items and response_items[0].plate_text:
+        detected_plate_text = response_items[0].plate_text
+        log.info(f"Attempting to send plate '{detected_plate_text}' to parking API")
+        
+        # Send to parking API (fire and forget - don't fail the main process if this fails)
+        try:
+            parking_success = parking_api.send_plate_to_parking(detected_plate_text)
+            if parking_success:
+                log.info(f"Successfully sent plate '{detected_plate_text}' to parking API")
+                parking_api_sent = True
+            else:
+                log.warning(f"Failed to send plate '{detected_plate_text}' to parking API")
+        except Exception as parking_err:
+            log.error(f"Error during parking API call for plate '{detected_plate_text}': {parking_err}")
       
     # --- D. Construct Final Result Object --- 
     final_cropped_plate_path = None # Initialize path variable
@@ -246,7 +340,8 @@ async def process_single_plate_image(img_input: str, request_params: ProcessImag
         plates=response_items,
         error=None,
         saved_image_path=saved_image_path,
-        cropped_plate_path=final_cropped_plate_path
+        cropped_plate_path=final_cropped_plate_path,
+        parking_api_sent=parking_api_sent
     )
     
     # --- E. Log Result to Database --- 

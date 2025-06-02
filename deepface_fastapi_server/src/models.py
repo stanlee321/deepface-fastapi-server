@@ -188,6 +188,7 @@ class PlateImageProcessingResult(BaseModel):
     app_type: Optional[str] = None
     saved_image_path: Optional[str] = None # Path where image copy was saved
     cropped_plate_path: Optional[str] = None # Path to the saved cropped plate image
+    parking_api_sent: Optional[bool] = None # Whether plate was successfully sent to parking API
 
 # The response will be a list of these items
 # No need for a separate wrapper model if just returning List[DetectWeaponsResponseItem]

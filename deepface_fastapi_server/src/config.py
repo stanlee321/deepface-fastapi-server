@@ -82,6 +82,13 @@ class Settings(BaseSettings):
     PLATE_DETECTION_CONFIDENCE_THRESHOLD: float = float(os.getenv("PLATE_DETECTION_CONFIDENCE_THRESHOLD", "0.70"))
     CROPPED_PLATES_OUTPUT_DIR: str = os.getenv("CROPPED_PLATES_OUTPUT_DIR", "")
     
+    # --- Parking API Configuration ---
+    PARKING_API_URL: str = os.getenv("PARKING_API_URL", "https://backend-vialika.vercel.app/api/v1/parkings")
+    PARKING_SOURCE: str = os.getenv("PARKING_SOURCE", "camera")
+    PARKING_LATITUDE: float = float(os.getenv("PARKING_LATITUDE", "-17.393398"))
+    PARKING_LONGITUDE: float = float(os.getenv("PARKING_LONGITUDE", "-66.248857"))
+    SEND_TO_PARKING_API: bool = os.getenv("SEND_TO_PARKING_API", "true").lower() == "true"
+    
     # --- AWS Rekognition Configuration ---
     AWS_THRESHOLD: float = os.getenv("AWS_THRESHOLD", 95.0)
 
