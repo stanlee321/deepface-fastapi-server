@@ -294,8 +294,7 @@ async def process_single_plate_image(img_input: str, request_params: ProcessImag
                     log.info(f"Successfully sent plate '{detected_plate_text}' to parking API")
                     parking_api_sent = True
                 else:
-                    log.warning(f"Failed to send plate '{detected_plate_text}' to parking API")
-                    
+                    log.warning(f"Failed to send plate '{detected_plate_text}' to parking API")   
             else:
                 log.warning(f"Skipping plate '{detected_plate_text}' to parking API because it's too short")
         except Exception as parking_err:
