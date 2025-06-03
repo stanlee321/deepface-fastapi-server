@@ -39,6 +39,19 @@ processed_images_table = Table(
     Column("cropped_path", String(512), nullable=True), # Path to the cropped face image
 )
 
+# New table for tracking plates sent to parking API
+sent_plates_table = Table(
+    "sent_plates",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("plate_text", String(50), index=True), # The plate text that was sent (indexed for fast lookups)
+    Column("code", String(1024)), # The code/session where it was detected
+    Column("confidence", String(10)), # Confidence score as string (e.g., "0.998")
+    Column("sent_timestamp", DateTime, default=func.now(), index=True), # When it was sent to parking API
+    Column("parking_api_response", String(10), nullable=True), # HTTP response code (e.g., "201", "500")
+    Column("internal_code", String(1024)), # The internal_code sent to parking API
+)
+
 # Create a synchronous engine for metadata creation if needed (databases doesn't do it)
 # Remove the async driver part for the sync engine URL
 sync_db_url = DATABASE_URL.replace("+aiosqlite", "")

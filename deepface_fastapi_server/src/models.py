@@ -189,6 +189,7 @@ class PlateImageProcessingResult(BaseModel):
     saved_image_path: Optional[str] = None # Path where image copy was saved
     cropped_plate_path: Optional[str] = None # Path to the saved cropped plate image
     parking_api_sent: Optional[bool] = None # Whether plate was successfully sent to parking API
+    superseded_by_better_detection: Optional[bool] = None # Whether this detection was superseded by a better one
 
 # The response will be a list of these items
 # No need for a separate wrapper model if just returning List[DetectWeaponsResponseItem]

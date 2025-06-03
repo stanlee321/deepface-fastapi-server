@@ -4,7 +4,7 @@ from typing import Optional, Union
 from datetime import datetime
 
 from database import database, processed_images_table
-from models import FaceImageProcessingResult, WeaponImageProcessingResult # Import the Pydantic model for type hinting
+from models import FaceImageProcessingResult, WeaponImageProcessingResult, PlateImageProcessingResult # Import the Pydantic model for type hinting
 from sqlalchemy import func
 from sqlalchemy import select
 
@@ -15,7 +15,7 @@ async def add_processed_image(
     saved_image_path: str,
     code: str,
     app_type: str,
-    result: Union[FaceImageProcessingResult, WeaponImageProcessingResult], # Use the Pydantic model
+    result: Union[FaceImageProcessingResult, WeaponImageProcessingResult, PlateImageProcessingResult], # Use the Pydantic model
     cropped_path: Optional[str] = None # Add new parameter
 ) -> Optional[int]:
     """Adds a record of a processed image and its results to the database."""
@@ -58,7 +58,19 @@ async def add_processed_image(
         return None
 
 # --- Optional: Add functions to retrieve records if needed --- 
-# async def get_processed_image_by_id(id: int): ...
+async def get_processed_image_by_id(record_id: int):
+    """Retrieves a processed image record by its ID."""
+    query = (
+        processed_images_table.select()
+        .where(processed_images_table.c.id == record_id)
+    )
+    
+    try:
+        result = await database.fetch_one(query=query)
+        return result
+    except Exception as e:
+        log.error(f"DB Error retrieving processed image by ID {record_id}: {e}")
+        return None
 
 async def get_all_processed_images(limit: int = 20, offset: int = 0, app_type: str = None):
     """Retrieves processed image records with pagination, newest first."""
@@ -101,5 +113,55 @@ async def get_processed_images_count(app_type: str = None) -> int:
     except Exception as e:
         log.error(f"DB Error counting processed images: {e}")
         return 0
+
+async def get_processed_images_by_code_and_app_type(code: str, app_type: str):
+    """Retrieves processed image records filtered by code and app_type."""
+    query = (
+        processed_images_table.select()
+        .where(
+            (processed_images_table.c.code == code) & 
+            (processed_images_table.c.app_type == app_type)
+        )
+        .order_by(processed_images_table.c.processing_timestamp.desc())
+    )
+    
+    try:
+        results = await database.fetch_all(query=query)
+        return results
+    except Exception as e:
+        log.error(f"DB Error retrieving processed images by code and app_type: {e}")
+        return []
+
+async def update_processed_image_result(record_id: int, new_result_json: str) -> bool:
+    """Updates the result_json field of a processed image record."""
+    query = (
+        processed_images_table.update()
+        .where(processed_images_table.c.id == record_id)
+        .values(result_json=new_result_json)
+    )
+    
+    try:
+        await database.execute(query=query)
+        log.info(f"Updated processed image record {record_id} result_json")
+        return True
+    except Exception as e:
+        log.error(f"DB Error updating processed image record {record_id}: {e}")
+        return False
+
+async def get_processed_image_by_saved_path(saved_image_path: str):
+    """Retrieves a processed image record by its saved image path."""
+    query = (
+        processed_images_table.select()
+        .where(processed_images_table.c.saved_image_path == saved_image_path)
+        .order_by(processed_images_table.c.processing_timestamp.desc())
+        .limit(1)
+    )
+    
+    try:
+        result = await database.fetch_one(query=query)
+        return result
+    except Exception as e:
+        log.error(f"DB Error retrieving processed image by saved path: {e}")
+        return None
 
 # async def get_processed_images_with_matches(): ... 
