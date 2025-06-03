@@ -43,6 +43,7 @@ POST /process-images
 
 import logging
 import requests
+import time
 from typing import List, Dict, Tuple, Optional
 
 # Import models and CRUD functions
@@ -80,7 +81,8 @@ class AlpAPI:
             data = {}
             if regions:
                 data['regions'] = regions
-                
+            
+            time.sleep(2)
             response = requests.post(
                 f'{self.base_url}/v1/plate-reader/',
                 data=data,
@@ -114,7 +116,7 @@ class ParkingAPI:
         self.latitude = latitude
         self.longitude = longitude
     
-    def send_plate_to_parking(self, license_plate: str) -> bool:
+    def send_plate_to_parking(self, license_plate: str, confidence: float, internal_code: str) -> bool:
         """
         Send detected license plate information to the parking API.
         
@@ -131,7 +133,9 @@ class ParkingAPI:
                 "location": {
                     "latitude": self.latitude,
                     "longitude": self.longitude
-                }
+                },
+                "confidence": confidence,
+                "internal_code": internal_code
             }
             
             log.info(f"Sending plate to parking API: {payload}")
@@ -163,7 +167,7 @@ async def process_single_plate_image(img_input: str, request_params: ProcessImag
     Detects plates in a single image using the AlpAPI plate recognition service.
     Returns a list of detected plates with coordinates and confidence.
     """
-    log.info(f"Received request for plate detection. Parameters: {request_params}")
+    # log.info(f"Received request for plate detection. Parameters: {request_params}")
 
     try:
         # --- A. Save a copy of the incoming image --- 
@@ -284,12 +288,16 @@ async def process_single_plate_image(img_input: str, request_params: ProcessImag
         
         # Send to parking API (fire and forget - don't fail the main process if this fails)
         try:
-            parking_success = parking_api.send_plate_to_parking(detected_plate_text)
-            if parking_success:
-                log.info(f"Successfully sent plate '{detected_plate_text}' to parking API")
-                parking_api_sent = True
+            if len(detected_plate_text) > 5:
+                parking_success = parking_api.send_plate_to_parking(detected_plate_text.upper(), confidence_score, request_params.code)
+                if parking_success:
+                    log.info(f"Successfully sent plate '{detected_plate_text}' to parking API")
+                    parking_api_sent = True
+                else:
+                    log.warning(f"Failed to send plate '{detected_plate_text}' to parking API")
+                    
             else:
-                log.warning(f"Failed to send plate '{detected_plate_text}' to parking API")
+                log.warning(f"Skipping plate '{detected_plate_text}' to parking API because it's too short")
         except Exception as parking_err:
             log.error(f"Error during parking API call for plate '{detected_plate_text}': {parking_err}")
       

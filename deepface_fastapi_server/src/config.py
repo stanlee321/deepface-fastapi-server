@@ -54,8 +54,8 @@ class Settings(BaseSettings):
     # NOTE: Default path might need adjustment depending on deployment.
     PROCESSED_IMAGES_OUTPUT_DIR: str = os.getenv("PROCESSED_IMAGES_OUTPUT_DIR", "")
     # Directory to save cropped face images (if feature enabled implicitly by logic)
-    CROPPED_FACES_OUTPUT_DIR: str = os.getenv("CROPPED_FACES_OUTPUT_DIR", "")
-    CROPPED_WEAPONS_OUTPUT_DIR: str = os.getenv("CROPPED_WEAPONS_OUTPUT_DIR", "")
+    CROPPED_FACES_OUTPUT_DIR: str = os.getenv("CROPPED_FACES_OUTPUT_DIR", "cropped_faces_output")
+    CROPPED_WEAPONS_OUTPUT_DIR: str = os.getenv("CROPPED_WEAPONS_OUTPUT_DIR", "cropped_weapons_output")
 
     # Optional: Database URL (if moving away from hardcoded database.py)
     # DATABASE_URL: str = "sqlite+aiosqlite:///./blacklist.db"
@@ -80,7 +80,7 @@ class Settings(BaseSettings):
     ALP_API_KEY: str = os.getenv("ALP_API_KEY", "21db5b37f73be40ca0f46d1dfce54e75995328be")
     ALP_BASE_URL: str = os.getenv("ALP_BASE_URL", "https://api.platerecognizer.com")
     PLATE_DETECTION_CONFIDENCE_THRESHOLD: float = float(os.getenv("PLATE_DETECTION_CONFIDENCE_THRESHOLD", "0.70"))
-    CROPPED_PLATES_OUTPUT_DIR: str = os.getenv("CROPPED_PLATES_OUTPUT_DIR", "")
+    CROPPED_PLATES_OUTPUT_DIR: str = os.getenv("CROPPED_PLATES_OUTPUT_DIR", "cropped_plates_output")
     
     # --- Parking API Configuration ---
     PARKING_API_URL: str = os.getenv("PARKING_API_URL", "https://backend-vialika.vercel.app/api/v1/parkings")
